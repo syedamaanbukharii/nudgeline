@@ -63,6 +63,7 @@ class Tenant(Base, TimestampMixin):
     status: Mapped[str] = mapped_column(sa.String(20), server_default="active", nullable=False)
     kyc_status: Mapped[str] = mapped_column(sa.String(20), server_default="pending", nullable=False)
     settings: Mapped[dict[str, Any]] = mapped_column(JSONB, server_default="{}", nullable=False)
+    data_key_enc: Mapped[bytes | None] = mapped_column(sa.LargeBinary)
 
     users: Mapped[list[User]] = relationship(back_populates="tenant")
 
