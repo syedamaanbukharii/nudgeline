@@ -10,18 +10,24 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import ORJSONResponse
 
+from apps.api.middleware.errors import register_error_handlers
+from apps.api.middleware.logging import configure_logging
+from apps.api.middleware.request_id import RequestIDMiddleware
+from modules.tenancy.domain.settings import get_settings
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Handle startup and shutdown."""
-    # Startup: initialize DB pool, Valkey connection, etc.
+    settings = get_settings()
+    configure_logging(json_output=settings.environment != "development")
     yield
-    # Shutdown: close connections
 
 
 def create_app() -> FastAPI:
     """Application factory."""
-    enable_docs = os.getenv("ENABLE_API_DOCS", "false").lower() == "true"
+    settings = get_settings()
+    enable_docs = settings.enable_api_docs
 
     app = FastAPI(
         title="Nudgeline API",
@@ -33,13 +39,18 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    # Middleware (order matters: outermost first)
+    app.add_middleware(RequestIDMiddleware)
+
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=os.getenv("CORS_ORIGINS", "http://localhost:3000").split(","),
+        allow_origins=settings.cors_origins.split(","),
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    register_error_handlers(app)
 
     @app.get("/healthz", tags=["system"])
     async def healthz() -> dict[str, str]:
