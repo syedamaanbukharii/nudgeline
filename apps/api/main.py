@@ -50,6 +50,11 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    from apps.api.routers import campaigns, live, webhooks
+    app.include_router(campaigns.router)
+    app.include_router(live.router)
+    app.include_router(webhooks.router)
+
     register_error_handlers(app)
 
     @app.get("/healthz", tags=["system"])
