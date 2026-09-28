@@ -1,20 +1,30 @@
-"""Text-to-speech service (Kokoro)."""
+"""Text-to-Speech (TTS) service entry point.
 
-from __future__ import annotations
+Uses Kokoro for TTS.
+"""
 
 from fastapi import FastAPI
-from fastapi.responses import ORJSONResponse
+from fastapi.responses import Response
+from pydantic import BaseModel
+import logging
 
-app = FastAPI(
-    title="Nudgeline TTS Service",
-    version="0.1.0",
-    docs_url=None,
-    redoc_url=None,
-    openapi_url=None,
-    default_response_class=ORJSONResponse,
-)
+app = FastAPI(title="Nudgeline TTS Service")
+logger = logging.getLogger(__name__)
 
+class TTSRequest(BaseModel):
+    text: str
+    voice: str = "default"
+
+@app.post("/v1/synthesize")
+async def synthesize(request: TTSRequest):
+    """Synthesize text into speech."""
+    logger.info(f"Synthesizing text with voice {request.voice}")
+    
+    # MVP: Mock audio generation (return empty wav headers or just a dummy byte string)
+    dummy_audio_bytes = b"RIFF\x24\x00\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x01\x00\x44\xac\x00\x00\x88\x58\x01\x00\x02\x00\x10\x00data\x00\x00\x00\x00"
+    
+    return Response(content=dummy_audio_bytes, media_type="audio/wav")
 
 @app.get("/healthz")
-async def healthz() -> dict[str, str]:
+async def healthz():
     return {"status": "ok"}
