@@ -50,10 +50,11 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    from apps.api.routers import campaigns, live, webhooks
+    from apps.api.routers import campaigns, live, webhooks, dashboards
     app.include_router(campaigns.router)
     app.include_router(live.router)
     app.include_router(webhooks.router)
+    app.include_router(dashboards.router)
 
     register_error_handlers(app)
 
