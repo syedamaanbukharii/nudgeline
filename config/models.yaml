@@ -1,0 +1,37 @@
+providers:
+  groq:
+    base_url: "https://api.groq.com/openai/v1"
+    allowed_for_pii: false
+  gemini:
+    allowed_for_pii: false
+  ollama:
+    base_url: "http://ollama:11434/v1"
+    allowed_for_pii: true
+  vllm:
+    base_url: "http://vllm:8001/v1"
+    allowed_for_pii: true
+
+tasks:
+  live_turn:
+    primary: groq/llama-3.1-8b-instant
+    fallback:
+      - ollama/llama3.1:8b
+    stream: true
+    ttft_timeout_ms: 1500
+  extraction:
+    primary: ollama/qwen2.5:7b
+    fallback: []
+    json_schema: extraction_v1
+  email_draft:
+    primary: ollama/qwen2.5:7b
+    fallback: []
+  verifier:
+    primary: ollama/qwen2.5:7b
+  slot_parse:
+    primary: ollama/qwen2.5:3b
+    validator: dateparser
+  embed:
+    primary: local/bge-m3
+  judge:
+    primary: gemini/gemini-2.0-flash
+    data: synthetic_only

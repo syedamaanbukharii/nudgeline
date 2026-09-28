@@ -1,0 +1,23 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'api'
+    static_configs:
+      - targets: ['api:8000']
+      
+  - job_name: 'job-worker'
+    static_configs:
+      - targets: ['job-worker:8000']
+      
+  - job_name: 'voice-worker'
+    static_configs:
+      - targets: ['voice-worker:8000']
+      
+  - job_name: 'stt'
+    static_configs:
+      - targets: ['stt:9000']
+      
+  - job_name: 'tts'
+    static_configs:
+      - targets: ['tts:8880']

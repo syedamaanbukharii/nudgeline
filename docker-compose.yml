@@ -1,0 +1,246 @@
+services:
+
+  # ── Data Layer ──────────────────────────────────────────────
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-nudgeline}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nudgeline}
+      POSTGRES_DB: ${POSTGRES_DB:-nudgeline}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-nudgeline}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    profiles: ["dev", "pilot", "prod"]
+
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-nudgeline}:${POSTGRES_PASSWORD:-nudgeline}@postgres:5432/${POSTGRES_DB:-nudgeline}
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: 200
+      DEFAULT_POOL_SIZE: 20
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles: ["dev", "pilot", "prod"]
+
+  valkey:
+    image: valkey/valkey:8.1-alpine
+    restart: unless-stopped
+    command: valkey-server --appendonly yes
+    volumes:
+      - valkey_data:/data
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    profiles: ["dev", "pilot", "prod"]
+
+  seaweedfs:
+    image: chrislusf/seaweedfs:latest
+    restart: unless-stopped
+    command: server -s3
+    volumes:
+      - seaweedfs_data:/data
+    profiles: ["dev", "pilot", "prod"]
+
+  # ── Auth ────────────────────────────────────────────────────
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.2
+    restart: unless-stopped
+    command: start-dev
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-nudgeline}
+      KC_DB_USERNAME: ${POSTGRES_USER:-nudgeline}
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD:-nudgeline}
+      KC_HOSTNAME_STRICT: "false"
+      KC_PROXY_HEADERS: xforwarded
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN_USER:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles: ["dev", "pilot", "prod"]
+
+  # ── Application ─────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL_SYNC: postgresql://${POSTGRES_USER:-nudgeline}:${POSTGRES_PASSWORD:-nudgeline}@pgbouncer:6432/${POSTGRES_DB:-nudgeline}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-nudgeline}:${POSTGRES_PASSWORD:-nudgeline}@pgbouncer:6432/${POSTGRES_DB:-nudgeline}
+    depends_on:
+      pgbouncer:
+        condition: service_started
+      valkey:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+    profiles: ["dev", "pilot", "prod"]
+
+  job-worker:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    command: ["python", "-m", "arq", "apps.job_worker.main.WorkerSettings"]
+    env_file: .env
+    environment:
+      DATABASE_URL_SYNC: postgresql://${POSTGRES_USER:-nudgeline}:${POSTGRES_PASSWORD:-nudgeline}@pgbouncer:6432/${POSTGRES_DB:-nudgeline}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-nudgeline}:${POSTGRES_PASSWORD:-nudgeline}@pgbouncer:6432/${POSTGRES_DB:-nudgeline}
+    depends_on:
+      pgbouncer:
+        condition: service_started
+      valkey:
+        condition: service_healthy
+    profiles: ["dev", "pilot", "prod"]
+
+  voice-worker:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    command: ["python", "-m", "apps.voice_worker.main"]
+    env_file: .env
+    depends_on:
+      - livekit
+    profiles: ["dev", "pilot", "prod"]
+
+  web:
+    build:
+      context: apps/web
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    profiles: ["dev", "pilot", "prod"]
+
+  # ── Voice ───────────────────────────────────────────────────
+  livekit:
+    image: livekit/livekit-server:v1.8
+    restart: unless-stopped
+    ports:
+      - "7881:7881"
+      - "50000-60000:50000-60000/udp"
+    volumes:
+      - ./infra/livekit/livekit.yaml:/livekit.yaml
+    command: --config /livekit.yaml
+    profiles: ["dev", "pilot", "prod"]
+
+  livekit-sip:
+    image: livekit/sip:latest
+    restart: unless-stopped
+    ports:
+      - "5060:5060/udp"
+      - "5060:5060/tcp"
+      - "10000-20000:10000-20000/udp"
+    depends_on:
+      - livekit
+    profiles: ["pilot", "prod"]
+
+  # ── AI / ML ─────────────────────────────────────────────────
+  stt:
+    build:
+      context: .
+      dockerfile: services/stt/Dockerfile
+    restart: unless-stopped
+    profiles: ["dev", "pilot", "prod"]
+
+  tts:
+    build:
+      context: .
+      dockerfile: services/tts/Dockerfile
+    restart: unless-stopped
+    profiles: ["dev", "pilot", "prod"]
+
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    volumes:
+      - ollama_data:/root/.ollama
+    profiles: ["dev"]
+
+  vllm:
+    image: vllm/vllm-openai:latest
+    restart: unless-stopped
+    profiles: ["pilot", "prod"]
+
+  # ── Observability ───────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:latest
+    restart: unless-stopped
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    profiles: ["dev", "pilot", "prod"]
+
+  grafana:
+    image: grafana/grafana-oss:latest
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning
+    profiles: ["dev", "pilot", "prod"]
+
+  loki:
+    image: grafana/loki:latest
+    restart: unless-stopped
+    profiles: ["dev", "pilot", "prod"]
+
+  glitchtip:
+    image: glitchtip/glitchtip:latest
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-nudgeline}:${POSTGRES_PASSWORD:-nudgeline}@postgres:5432/${POSTGRES_DB:-nudgeline}
+      SECRET_KEY: ${SECRET_KEY:-change-me}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles: ["dev", "pilot", "prod"]
+
+  langfuse:
+    image: langfuse/langfuse:latest
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-nudgeline}:${POSTGRES_PASSWORD:-nudgeline}@postgres:5432/${POSTGRES_DB:-nudgeline}
+      NEXTAUTH_SECRET: ${SECRET_KEY:-change-me}
+      NEXTAUTH_URL: http://localhost:3001
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles: ["dev", "pilot", "prod"]
+
+  # ── Reverse Proxy ──────────────────────────────────────────
+  nginx:
+    image: nginx:stable-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - api
+      - web
+      - keycloak
+      - livekit
+    volumes:
+      - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./infra/nginx/certs:/etc/nginx/certs:ro
+    profiles: ["dev", "pilot", "prod"]
+
+volumes:
+  postgres_data:
+  valkey_data:
+  seaweedfs_data:
+  ollama_data:
+  grafana_data:

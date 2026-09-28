@@ -1,0 +1,65 @@
+[project]
+name = "nudgeline"
+version = "0.1.0"
+description = "Nudgeline backend"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi==0.115.12",
+    "uvicorn[standard]==0.34.2",
+    "pydantic==2.11.3",
+    "pydantic-settings==2.9.1",
+    "sqlalchemy[asyncio]==2.0.41",
+    "asyncpg==0.30.0",
+    "alembic==1.15.2",
+    "arq==0.26.1",
+    "httpx==0.28.1",
+    "authlib==1.6.0",
+    "python-jose[cryptography]==3.4.0",
+    "python-multipart==0.0.20",
+    "structlog==25.1.0",
+    "orjson==3.10.18",
+    "tenacity==9.1.2",
+    "phonenumbers==8.13.55",
+    "dateparser==1.2.1",
+    "cryptography==44.0.3",
+    "boto3==1.38.34",
+    "valkey==6.1.0",
+    "opentelemetry-api==1.33.1",
+    "opentelemetry-sdk==1.33.1",
+    "opentelemetry-instrumentation-fastapi==0.54b1",
+    "langfuse==2.60.0",
+    "langgraph==0.4.1",
+    "jinja2==3.1.6",
+    "python-slugify==8.0.4",
+]
+
+[dependency-groups]
+dev = [
+    "ruff==0.11.12",
+    "mypy==1.15.0",
+    "pytest==8.4.0",
+    "pytest-asyncio==1.0.0",
+    "pytest-cov==6.1.1",
+    "httpx>=0.28.1",
+    "factory-boy==3.3.3",
+    "import-linter==2.4",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+src = ["apps", "modules", "services"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "UP", "B", "SIM", "TCH"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["pydantic.mypy"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+
+[tool.importlinter]
+root_packages = ["apps", "modules", "services"]
