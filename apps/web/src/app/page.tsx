@@ -26,7 +26,7 @@ export default function DashboardPage() {
           },
           {
             id: "team-2",
-            name": "Inbound Beta",
+            name: "Inbound Beta",
             lead_name: "Mike Supervisor",
             target_calls: 50,
             actual_calls: 55,
