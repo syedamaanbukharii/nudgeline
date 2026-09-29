@@ -1,6 +1,15 @@
-.PHONY: up down migrate lint typecheck test evals web logs reset-db shell
+.PHONY: up down migrate lint typecheck test evals web logs reset-db shell certs setup
 
-up:
+setup: certs
+	cp -n .env.example .env || true
+	cp -n .env.example .env.staging || true
+	cp -n .env.example .env.prod || true
+
+certs:
+	@echo "Generating local SSL certs for Nginx..."
+	python generate_cert.py
+
+up: setup
 	docker compose --profile dev up -d --build
 
 down:
