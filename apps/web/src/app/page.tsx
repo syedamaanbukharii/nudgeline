@@ -13,7 +13,11 @@ import {
   Clock,
   Bell,
   PhoneForwarded,
-  Bot
+  Bot,
+  UserCircle,
+  LogOut,
+  Activity,
+  Phone
 } from "lucide-react";
 
 type Lead = { id: number; name: string; company: string; status: string; history: string[] };
@@ -33,12 +37,22 @@ export default function DashboardPage() {
   ]);
 
   const [callbacks, setCallbacks] = useState<Callback[]>([
-    { id: 101, prospect: "Sarah Jenkins", date: "Today", time: "3:30 PM", reason: "AI Call: Prospect was boarding a flight." }
+    { id: 101, prospect: "Sarah Jenkins", date: "Today", time: "3:30 PM", reason: "Prospect was boarding a flight." }
   ]);
 
   const [meetings, setMeetings] = useState([
     { id: 201, prospect: "John Doe (Acme Corp)", date: "Tomorrow", time: "10:00 AM" }
   ]);
+
+  // Derived User Identity
+  const getUserProfile = () => {
+    switch(role) {
+      case "admin": return { name: "System Admin", email: "admin@nudgeline.com", title: "Platform Owner" };
+      case "manager": return { name: "Sarah Manager", email: "sarah@nudgeline.com", title: "Outbound Alpha Lead" };
+      case "rep": return { name: "Alex Rep", email: "alex@nudgeline.com", title: "BD Associate" };
+    }
+  };
+  const user = getUserProfile();
 
   const handleStartAICall = (lead: Lead) => {
     setCallingLead(lead.id);
@@ -47,69 +61,95 @@ export default function DashboardPage() {
     setTimeout(() => {
       setCallingLead(null);
       
-      // We will hardcode specific AI outcomes to demonstrate the logic
       if (lead.id === 1) {
-        // Outcome 1: AI successfully books a meeting
-        alert(`🎙️ AI Agent finished call with ${lead.name}.\n\nOutcome: Successfully booked a demo! Adding to calendar.`);
+        alert(`[SYSTEM] AI Agent finished call with ${lead.name}.\n\nOutcome: Successfully booked a demo! Adding to calendar.`);
         setMeetings(prev => [...prev, { id: Date.now(), prospect: lead.name, date: "Friday", time: "11:00 AM" }]);
         setLeads(prev => prev.map(l => l.id === lead.id ? { ...l, status: "Meeting Booked" } : l));
-      
       } else if (lead.id === 2) {
-        // Outcome 2: Prospect is busy, AI extracts the callback intent
-        alert(`🎙️ AI Agent finished call with ${lead.name}.\n\nTranscript: "Hey, I'm actually driving right now, can you call me back tomorrow morning?"\n\nOutcome: AI extracted a callback intent. Adding reminder for the BD Rep!`);
-        setCallbacks(prev => [...prev, { id: Date.now(), prospect: lead.name, date: "Tomorrow", time: "9:00 AM", reason: "AI Call: Prospect was driving, requested callback." }]);
+        alert(`[SYSTEM] AI Agent finished call with ${lead.name}.\n\nTranscript: "I'm actually driving right now, can you call me back tomorrow morning?"\n\nOutcome: AI extracted a callback intent. Adding reminder for the BD Rep.`);
+        setCallbacks(prev => [...prev, { id: Date.now(), prospect: lead.name, date: "Tomorrow", time: "9:00 AM", reason: "Prospect was driving, requested callback." }]);
         setLeads(prev => prev.map(l => l.id === lead.id ? { ...l, status: "Callback Scheduled" } : l));
-      
       } else {
-        // Outcome 3: No answer
-        alert(`🎙️ AI Agent finished call with ${lead.name}.\n\nOutcome: Voicemail reached. Left a message.`);
+        alert(`[SYSTEM] AI Agent finished call with ${lead.name}.\n\nOutcome: Voicemail reached. Left a message.`);
         setLeads(prev => prev.map(l => l.id === lead.id ? { ...l, status: "Left Voicemail" } : l));
       }
     }, 3500);
   };
 
+  const handleManualCall = (prospect: string) => {
+    // Action triggered for manual dialer
+    alert(`[SYSTEM] Initiating manual browser SIP dialer to call ${prospect}...`);
+  };
+
   return (
     <div className="flex h-full -m-6">
       {/* Sidebar Navigation */}
-      <div className="w-64 bg-slate-900 text-slate-300 p-4 flex flex-col min-h-[calc(100vh-3.5rem)]">
-        <div className="mb-8">
-          <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Role Simulation</h2>
-          <div className="flex flex-col space-y-2">
-            <button onClick={() => { setRole("admin"); setActiveTab("dashboard"); }} className={`px-3 py-2 text-sm text-left rounded-md transition ${role === 'admin' ? 'bg-indigo-600 text-white' : 'hover:bg-slate-800'}`}>👑 Admin / Owner</button>
-            <button onClick={() => { setRole("manager"); setActiveTab("dashboard"); }} className={`px-3 py-2 text-sm text-left rounded-md transition ${role === 'manager' ? 'bg-indigo-600 text-white' : 'hover:bg-slate-800'}`}>📊 Team Manager</button>
-            <button onClick={() => { setRole("rep"); setActiveTab("dialer"); }} className={`px-3 py-2 text-sm text-left rounded-md transition ${role === 'rep' ? 'bg-indigo-600 text-white' : 'hover:bg-slate-800'}`}>📞 BD Rep (Member)</button>
+      <div className="w-64 bg-slate-900 text-slate-300 p-4 flex flex-col min-h-[calc(100vh-3.5rem)] justify-between">
+        
+        {/* Top Menu Section */}
+        <div>
+          <div className="mb-8">
+            <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Role Simulation</h2>
+            <div className="flex flex-col space-y-2">
+              <button onClick={() => { setRole("admin"); setActiveTab("dashboard"); }} className={`px-3 py-2 text-sm flex items-center rounded-md transition ${role === 'admin' ? 'bg-indigo-600 text-white' : 'hover:bg-slate-800'}`}>
+                <ShieldCheck className="w-4 h-4 mr-2" /> Admin
+              </button>
+              <button onClick={() => { setRole("manager"); setActiveTab("dashboard"); }} className={`px-3 py-2 text-sm flex items-center rounded-md transition ${role === 'manager' ? 'bg-indigo-600 text-white' : 'hover:bg-slate-800'}`}>
+                <Activity className="w-4 h-4 mr-2" /> Team Manager
+              </button>
+              <button onClick={() => { setRole("rep"); setActiveTab("dialer"); }} className={`px-3 py-2 text-sm flex items-center rounded-md transition ${role === 'rep' ? 'bg-indigo-600 text-white' : 'hover:bg-slate-800'}`}>
+                <PhoneCall className="w-4 h-4 mr-2" /> BD Rep (Member)
+              </button>
+            </div>
+          </div>
+
+          <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Menu</h2>
+          <nav className="space-y-1">
+            <button onClick={() => setActiveTab("dashboard")} className={`w-full flex items-center space-x-3 px-3 py-2 text-sm rounded-md transition ${activeTab === 'dashboard' ? 'bg-slate-800 text-white' : 'hover:bg-slate-800'}`}>
+              <BarChart3 className="w-4 h-4" /> <span>Dashboard</span>
+            </button>
+            
+            {(role === 'rep' || role === 'manager') && (
+              <button onClick={() => setActiveTab("dialer")} className={`w-full flex items-center space-x-3 px-3 py-2 text-sm rounded-md transition ${activeTab === 'dialer' ? 'bg-slate-800 text-white' : 'hover:bg-slate-800'}`}>
+                <PhoneCall className="w-4 h-4" /> <span>My Leads & Dialer</span>
+              </button>
+            )}
+
+            {(role === 'manager' || role === 'admin') && (
+              <button onClick={() => setActiveTab("campaigns")} className={`w-full flex items-center space-x-3 px-3 py-2 text-sm rounded-md transition ${activeTab === 'campaigns' ? 'bg-slate-800 text-white' : 'hover:bg-slate-800'}`}>
+                <Users className="w-4 h-4" /> <span>Team Campaigns</span>
+              </button>
+            )}
+
+            {role === 'admin' && (
+              <>
+                <button onClick={() => setActiveTab("compliance")} className={`w-full flex items-center space-x-3 px-3 py-2 text-sm rounded-md transition ${activeTab === 'compliance' ? 'bg-slate-800 text-white' : 'hover:bg-slate-800'}`}>
+                  <ShieldCheck className="w-4 h-4" /> <span>Compliance Center</span>
+                </button>
+                <button onClick={() => setActiveTab("settings")} className={`w-full flex items-center space-x-3 px-3 py-2 text-sm rounded-md transition ${activeTab === 'settings' ? 'bg-slate-800 text-white' : 'hover:bg-slate-800'}`}>
+                  <Settings className="w-4 h-4" /> <span>Integrations</span>
+                </button>
+              </>
+            )}
+          </nav>
+        </div>
+
+        {/* Bottom User Profile Section */}
+        <div className="pt-4 border-t border-slate-800">
+          <div className="flex items-center space-x-3 px-2">
+            <div className="bg-indigo-600 p-2 rounded-full text-white">
+              <UserCircle className="w-5 h-5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-white truncate">{user.name}</p>
+              <p className="text-xs text-slate-400 truncate">{user.email}</p>
+            </div>
+            <button className="text-slate-400 hover:text-white transition">
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
         </div>
 
-        <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Menu</h2>
-        <nav className="space-y-1">
-          <button onClick={() => setActiveTab("dashboard")} className={`w-full flex items-center space-x-3 px-3 py-2 text-sm rounded-md transition ${activeTab === 'dashboard' ? 'bg-slate-800 text-white' : 'hover:bg-slate-800'}`}>
-            <BarChart3 className="w-4 h-4" /> <span>Dashboard</span>
-          </button>
-          
-          {(role === 'rep' || role === 'manager') && (
-            <button onClick={() => setActiveTab("dialer")} className={`w-full flex items-center space-x-3 px-3 py-2 text-sm rounded-md transition ${activeTab === 'dialer' ? 'bg-slate-800 text-white' : 'hover:bg-slate-800'}`}>
-              <PhoneCall className="w-4 h-4" /> <span>My Leads & Dialer</span>
-            </button>
-          )}
-
-          {(role === 'manager' || role === 'admin') && (
-            <button onClick={() => setActiveTab("campaigns")} className={`w-full flex items-center space-x-3 px-3 py-2 text-sm rounded-md transition ${activeTab === 'campaigns' ? 'bg-slate-800 text-white' : 'hover:bg-slate-800'}`}>
-              <Users className="w-4 h-4" /> <span>Team Campaigns</span>
-            </button>
-          )}
-
-          {role === 'admin' && (
-            <>
-              <button onClick={() => setActiveTab("compliance")} className={`w-full flex items-center space-x-3 px-3 py-2 text-sm rounded-md transition ${activeTab === 'compliance' ? 'bg-slate-800 text-white' : 'hover:bg-slate-800'}`}>
-                <ShieldCheck className="w-4 h-4" /> <span>Compliance Center</span>
-              </button>
-              <button onClick={() => setActiveTab("settings")} className={`w-full flex items-center space-x-3 px-3 py-2 text-sm rounded-md transition ${activeTab === 'settings' ? 'bg-slate-800 text-white' : 'hover:bg-slate-800'}`}>
-                <Settings className="w-4 h-4" /> <span>Integrations</span>
-              </button>
-            </>
-          )}
-        </nav>
       </div>
 
       {/* Main Content Area */}
@@ -123,7 +163,7 @@ export default function DashboardPage() {
               <p className="text-slate-500">Dispatch your AI voice agent. Outcomes (like callbacks or booked meetings) are automatically logged below.</p>
             </div>
 
-            {/* AI Callbacks Section (Specifically addressing the user's logic request) */}
+            {/* AI Callbacks Section */}
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 shadow-sm">
               <h3 className="text-lg font-bold text-amber-900 flex items-center mb-4">
                 <Bell className="w-5 h-5 mr-2" /> Action Required: AI Scheduled Reminders & Callbacks
@@ -138,13 +178,18 @@ export default function DashboardPage() {
                         <div className="bg-amber-100 p-2 rounded-full text-amber-600 mt-1"><PhoneForwarded className="w-4 h-4" /></div>
                         <div>
                           <p className="font-bold text-slate-900">Call {cb.prospect} Back</p>
-                          <p className="text-sm text-slate-600 mt-1"><strong>AI Note:</strong> "{cb.reason}"</p>
+                          <p className="text-sm text-slate-600 mt-1"><strong>AI Note:</strong> {cb.reason}</p>
                         </div>
                       </div>
                       <div className="text-right">
                         <p className="font-bold text-amber-700">{cb.date}</p>
                         <p className="text-sm text-amber-600">{cb.time}</p>
-                        <button className="mt-2 text-xs bg-amber-600 hover:bg-amber-700 text-white px-3 py-1 rounded transition">Manual Call Now</button>
+                        <button 
+                          onClick={() => handleManualCall(cb.prospect)}
+                          className="mt-2 text-xs bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 flex items-center space-x-1 rounded transition ml-auto"
+                        >
+                          <Phone className="w-3 h-3" /> <span>Manual Call Now</span>
+                        </button>
                       </div>
                     </div>
                   ))}
@@ -257,7 +302,7 @@ export default function DashboardPage() {
               <p className="text-slate-500">Monitor your BD Reps and active AI campaigns.</p>
             </div>
 
-            <div className="grid gap-6 md:grid-cols-2">
+            <div className="grid gap-6 md:grid-cols-2 mb-8">
               <div className="rounded-xl border bg-white shadow-sm p-6">
                 <h3 className="font-semibold text-lg mb-4">Team: Outbound Alpha</h3>
                 <div className="space-y-4">
@@ -282,6 +327,35 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
+
+            {/* Team Members List */}
+            <h3 className="text-xl font-bold text-slate-900 mb-4">Team Members</h3>
+            <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
+              <table className="w-full text-sm text-left">
+                <thead className="bg-slate-50 border-b text-slate-600 font-semibold">
+                  <tr>
+                    <th className="px-6 py-4">Rep Name</th>
+                    <th className="px-6 py-4">AI Calls Dispatched</th>
+                    <th className="px-6 py-4">Meetings Booked</th>
+                    <th className="px-6 py-4">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  <tr className="hover:bg-slate-50">
+                    <td className="px-6 py-4 font-medium">Alex Rep</td>
+                    <td className="px-6 py-4 text-slate-600">42</td>
+                    <td className="px-6 py-4 text-slate-600">3</td>
+                    <td className="px-6 py-4"><span className="text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full text-xs font-medium">On Target</span></td>
+                  </tr>
+                  <tr className="hover:bg-slate-50">
+                    <td className="px-6 py-4 font-medium">Sam Closer</td>
+                    <td className="px-6 py-4 text-slate-600">108</td>
+                    <td className="px-6 py-4 text-slate-600">5</td>
+                    <td className="px-6 py-4"><span className="text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full text-xs font-medium">On Target</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
@@ -293,7 +367,7 @@ export default function DashboardPage() {
               <p className="text-slate-500">Global billing, compliance, and organization stats.</p>
             </div>
 
-            <div className="grid grid-cols-4 gap-6">
+            <div className="grid grid-cols-4 gap-6 mb-8">
               <div className="bg-white p-6 rounded-xl border shadow-sm">
                 <p className="text-sm font-semibold text-slate-500">Total Telecom Spend</p>
                 <p className="text-2xl font-bold mt-2">$342.50</p>
@@ -311,6 +385,37 @@ export default function DashboardPage() {
                 <p className="text-lg font-bold mt-2 text-emerald-600 flex items-center"><CheckCircle2 className="w-5 h-5 mr-1"/> All Systems Go</p>
               </div>
             </div>
+
+            <h3 className="text-xl font-bold text-slate-900 mb-4">Active System Integrations</h3>
+            <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
+              <table className="w-full text-sm text-left">
+                <thead className="bg-slate-50 border-b text-slate-600 font-semibold">
+                  <tr>
+                    <th className="px-6 py-4">Service</th>
+                    <th className="px-6 py-4">Status</th>
+                    <th className="px-6 py-4 text-right">Last Sync</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  <tr className="hover:bg-slate-50">
+                    <td className="px-6 py-4 font-medium flex items-center space-x-2"><Activity className="w-4 h-4 text-indigo-500" /> <span>LiveKit WebRTC</span></td>
+                    <td className="px-6 py-4"><span className="text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full text-xs font-medium">Connected</span></td>
+                    <td className="px-6 py-4 text-right text-slate-500">Just now</td>
+                  </tr>
+                  <tr className="hover:bg-slate-50">
+                    <td className="px-6 py-4 font-medium flex items-center space-x-2"><Bot className="w-4 h-4 text-slate-500" /> <span>Google Gemini / OpenAI</span></td>
+                    <td className="px-6 py-4"><span className="text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full text-xs font-medium">Connected</span></td>
+                    <td className="px-6 py-4 text-right text-slate-500">2 mins ago</td>
+                  </tr>
+                  <tr className="hover:bg-slate-50">
+                    <td className="px-6 py-4 font-medium flex items-center space-x-2"><Phone className="w-4 h-4 text-slate-500" /> <span>SIP Trunk (Twilio)</span></td>
+                    <td className="px-6 py-4"><span className="text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full text-xs font-medium">Connected</span></td>
+                    <td className="px-6 py-4 text-right text-slate-500">1 hr ago</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
           </div>
         )}
 
