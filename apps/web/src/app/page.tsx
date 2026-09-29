@@ -54,31 +54,38 @@ export default function DashboardPage() {
   };
   const user = getUserProfile();
 
+  // Production-grade Toast Notification State
+  const [toast, setToast] = useState<{ title: string; message: string; type: "success" | "info" } | null>(null);
+
+  const showToast = (title: string, message: string, type: "success" | "info" = "info") => {
+    setToast({ title, message, type });
+    setTimeout(() => setToast(null), 6000); // auto-hide after 6s
+  };
+
   const handleStartAICall = (lead: Lead) => {
     setCallingLead(lead.id);
     
-    // Simulate AI Call duration and outcome parsing
+    // Simulate Backend LiveKit/Gemini AI Call duration
     setTimeout(() => {
       setCallingLead(null);
       
       if (lead.id === 1) {
-        alert(`[SYSTEM] AI Agent finished call with ${lead.name}.\n\nOutcome: Successfully booked a demo! Adding to calendar.`);
+        showToast("Call Completed: Demo Booked!", `AI Agent successfully qualified ${lead.name} and synced the meeting to your calendar.`, "success");
         setMeetings(prev => [...prev, { id: Date.now(), prospect: lead.name, date: "Friday", time: "11:00 AM" }]);
         setLeads(prev => prev.map(l => l.id === lead.id ? { ...l, status: "Meeting Booked" } : l));
       } else if (lead.id === 2) {
-        alert(`[SYSTEM] AI Agent finished call with ${lead.name}.\n\nTranscript: "I'm actually driving right now, can you call me back tomorrow morning?"\n\nOutcome: AI extracted a callback intent. Adding reminder for the BD Rep.`);
+        showToast("Call Completed: Callback Scheduled", `Transcript intent extracted via LangGraph: Prospect is driving. Callback scheduled for tomorrow morning.`, "info");
         setCallbacks(prev => [...prev, { id: Date.now(), prospect: lead.name, date: "Tomorrow", time: "9:00 AM", reason: "Prospect was driving, requested callback." }]);
         setLeads(prev => prev.map(l => l.id === lead.id ? { ...l, status: "Callback Scheduled" } : l));
       } else {
-        alert(`[SYSTEM] AI Agent finished call with ${lead.name}.\n\nOutcome: Voicemail reached. Left a message.`);
+        showToast("Call Completed: Voicemail", `AI Agent left a tailored voicemail for ${lead.name}.`, "info");
         setLeads(prev => prev.map(l => l.id === lead.id ? { ...l, status: "Left Voicemail" } : l));
       }
     }, 3500);
   };
 
   const handleManualCall = (prospect: string) => {
-    // Action triggered for manual dialer
-    alert(`[SYSTEM] Initiating manual browser SIP dialer to call ${prospect}...`);
+    showToast("Manual Dialer Initiated", `Starting SIP WebRTC connection to call ${prospect}...`, "info");
   };
 
   return (
@@ -415,6 +422,25 @@ export default function DashboardPage() {
         )}
 
       </div>
+
+      {/* Production Toast Notifications */}
+      {toast && (
+        <div className="fixed top-6 right-6 z-50 max-w-sm w-full bg-white border border-slate-200 shadow-2xl rounded-xl p-4 flex items-start space-x-3 animate-in slide-in-from-top-5 fade-in duration-300">
+          {toast.type === "success" ? (
+            <div className="bg-emerald-100 text-emerald-600 p-2 rounded-full flex-shrink-0">
+              <CheckCircle2 className="w-5 h-5" />
+            </div>
+          ) : (
+            <div className="bg-indigo-100 text-indigo-600 p-2 rounded-full flex-shrink-0">
+              <Bell className="w-5 h-5" />
+            </div>
+          )}
+          <div>
+            <h4 className="font-bold text-slate-900 text-sm">{toast.title}</h4>
+            <p className="text-sm text-slate-600 mt-1">{toast.message}</p>
+          </div>
+        </div>
+      )}
 
       {/* Developer Tool: Role Switcher (Floating) */}
       <div className="fixed bottom-4 right-4 bg-white p-3 rounded-xl shadow-2xl border border-slate-200 flex items-center space-x-3 z-50">
