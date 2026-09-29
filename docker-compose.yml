@@ -131,7 +131,7 @@ services:
     restart: unless-stopped
     ports:
       - "7881:7881"
-      - "50000-60000:50000-60000/udp"
+      - "50000-50050:50000-50050/udp"
     volumes:
       - ./infra/livekit/livekit.yaml:/livekit.yaml
     command: --config /livekit.yaml
@@ -143,7 +143,7 @@ services:
     ports:
       - "5060:5060/udp"
       - "5060:5060/tcp"
-      - "10000-20000:10000-20000/udp"
+      - "10000-10050:10000-10050/udp"
     depends_on:
       - livekit
     profiles: ["pilot", "prod"]
