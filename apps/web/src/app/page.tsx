@@ -544,7 +544,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <div className="text-center">
-                  <p className="font-bold text-xl text-slate-900 mb-2">{activeCall.lead.name}</p>
+                  <p className="font-bold text-xl text-slate-900 mb-2">{activeCall.name}</p>
                   <p className="text-indigo-600 font-semibold text-sm uppercase tracking-wide">{activeCall.phase}</p>
                   <p className="text-slate-500 text-sm mt-1">{activeCall.description}</p>
                 </div>
