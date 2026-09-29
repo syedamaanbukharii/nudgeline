@@ -1,5 +1,3 @@
-"use client";
-
 import { useState } from "react";
 import { 
   Users, 
@@ -17,11 +15,15 @@ import {
   UserCircle,
   LogOut,
   Activity,
-  Phone
+  Phone,
+  X,
+  Briefcase,
+  StickyNote
 } from "lucide-react";
 
 type Lead = { id: number; name: string; company: string; status: string; history: string[] };
 type Callback = { id: number; prospect: string; date: string; time: string; reason: string };
+type Meeting = { id: number; prospect: string; company: string; role: string; phone: string; date: string; time: string; summary: string };
 
 export default function DashboardPage() {
   const [role, setRole] = useState<"admin" | "manager" | "rep">("rep");
@@ -29,6 +31,7 @@ export default function DashboardPage() {
 
   // Mock State for AI Caller Simulation
   const [callingLead, setCallingLead] = useState<number | null>(null);
+  const [customNumber, setCustomNumber] = useState("");
   
   const [leads, setLeads] = useState<Lead[]>([
     { id: 1, name: "Alice Johnson", company: "TechCorp Inc.", status: "New Lead", history: [] },
@@ -40,9 +43,11 @@ export default function DashboardPage() {
     { id: 101, prospect: "Sarah Jenkins", date: "Today", time: "3:30 PM", reason: "Prospect was boarding a flight." }
   ]);
 
-  const [meetings, setMeetings] = useState([
-    { id: 201, prospect: "John Doe (Acme Corp)", date: "Tomorrow", time: "10:00 AM" }
+  const [meetings, setMeetings] = useState<Meeting[]>([
+    { id: 201, prospect: "John Doe", company: "Acme Corp", role: "VP of Sales", phone: "+1 (555) 019-2834", date: "Tomorrow", time: "10:00 AM", summary: "John is highly interested in the Q3 product roadmap. AI qualified him for enterprise tier." }
   ]);
+  
+  const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
 
   // Derived User Identity
   const getUserProfile = () => {
@@ -58,7 +63,7 @@ export default function DashboardPage() {
   const [toast, setToast] = useState<{ title: string; message: string; type: "success" | "info" } | null>(null);
   
   // Real-time Live Call Tracking State
-  const [activeCall, setActiveCall] = useState<{ lead: Lead; phase: string; description: string; isSpeaking: boolean } | null>(null);
+  const [activeCall, setActiveCall] = useState<{ name: string; phase: string; description: string; isSpeaking: boolean } | null>(null);
 
   const showToast = (title: string, message: string, type: "success" | "info" = "info") => {
     setToast({ title, message, type });
@@ -67,43 +72,55 @@ export default function DashboardPage() {
 
   const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
+  const handleCustomCall = async () => {
+    if (!customNumber) return;
+    setActiveCall({ name: customNumber, phase: "Dialing...", description: "Connecting to Twilio SIP trunk", isSpeaking: false });
+    await sleep(2000);
+    setActiveCall({ name: customNumber, phase: "Ringing", description: "Waiting for network routing...", isSpeaking: false });
+    await sleep(3000);
+    setActiveCall({ name: customNumber, phase: "Failed", description: "Backend Python Voice Worker not connected yet.", isSpeaking: false });
+    await sleep(2000);
+    setActiveCall(null);
+    showToast("Call Failed", "Cannot ring real phones until the backend LiveKit Python worker is deployed with Twilio credentials.", "info");
+  };
+
   const handleStartAICall = async (lead: Lead) => {
     setCallingLead(lead.id);
     
     // 1. SIP Dialing Phase
-    setActiveCall({ lead, phase: "Dialing...", description: "Connecting to Twilio SIP trunk", isSpeaking: false });
+    setActiveCall({ name: lead.name, phase: "Dialing...", description: "Connecting to Twilio SIP trunk", isSpeaking: false });
     await sleep(1500);
     
     // 2. Ringing Phase
-    setActiveCall({ lead, phase: "Ringing", description: "Waiting for prospect to answer...", isSpeaking: false });
+    setActiveCall({ name: lead.name, phase: "Ringing", description: "Waiting for prospect to answer...", isSpeaking: false });
     await sleep(2000);
     
-    if (lead.id === 1) { // Outcome 1: Success / Booked
-      setActiveCall({ lead, phase: "Connected", description: "AI Agent is speaking...", isSpeaking: true });
+    if (lead.id === 1) { 
+      setActiveCall({ name: lead.name, phase: "Connected", description: "AI Agent is speaking...", isSpeaking: true });
       await sleep(2000);
-      setActiveCall({ lead, phase: "Connected", description: `${lead.name} is answering...`, isSpeaking: false });
+      setActiveCall({ name: lead.name, phase: "Connected", description: `${lead.name} is answering...`, isSpeaking: false });
       await sleep(2000);
-      setActiveCall({ lead, phase: "Post-Call Processing", description: "LangGraph extracting calendar intent...", isSpeaking: false });
+      setActiveCall({ name: lead.name, phase: "Post-Call Processing", description: "LangGraph extracting calendar intent...", isSpeaking: false });
       await sleep(1500);
       
       showToast("Call Completed: Demo Booked!", `AI Agent successfully qualified ${lead.name} and synced the meeting to your calendar.`, "success");
-      setMeetings(prev => [...prev, { id: Date.now(), prospect: lead.name, date: "Friday", time: "11:00 AM" }]);
+      setMeetings(prev => [...prev, { id: Date.now(), prospect: lead.name, company: lead.company, role: "Director", phone: "+1 (555) 999-0000", date: "Friday", time: "11:00 AM", summary: "Alice confirmed she is looking for a new platform. Budget approved." }]);
       setLeads(prev => prev.map(l => l.id === lead.id ? { ...l, status: "Meeting Booked" } : l));
       
-    } else if (lead.id === 2) { // Outcome 2: Callback requested
-      setActiveCall({ lead, phase: "Connected", description: "AI Agent is speaking...", isSpeaking: true });
+    } else if (lead.id === 2) {
+      setActiveCall({ name: lead.name, phase: "Connected", description: "AI Agent is speaking...", isSpeaking: true });
       await sleep(1500);
-      setActiveCall({ lead, phase: "Connected", description: `${lead.name} is speaking (driving)...`, isSpeaking: false });
+      setActiveCall({ name: lead.name, phase: "Connected", description: `${lead.name} is speaking (driving)...`, isSpeaking: false });
       await sleep(2000);
-      setActiveCall({ lead, phase: "Post-Call Processing", description: "LangGraph identifying callback intent...", isSpeaking: false });
+      setActiveCall({ name: lead.name, phase: "Post-Call Processing", description: "LangGraph identifying callback intent...", isSpeaking: false });
       await sleep(1500);
 
       showToast("Call Completed: Callback Scheduled", `Transcript intent extracted via LangGraph: Prospect is driving. Callback scheduled for tomorrow morning.`, "info");
       setCallbacks(prev => [...prev, { id: Date.now(), prospect: lead.name, date: "Tomorrow", time: "9:00 AM", reason: "Prospect was driving, requested callback." }]);
       setLeads(prev => prev.map(l => l.id === lead.id ? { ...l, status: "Callback Scheduled" } : l));
       
-    } else { // Outcome 3: Voicemail
-      setActiveCall({ lead, phase: "Voicemail", description: "Leaving AI-generated voicemail...", isSpeaking: true });
+    } else { 
+      setActiveCall({ name: lead.name, phase: "Voicemail", description: "Leaving AI-generated voicemail...", isSpeaking: true });
       await sleep(3000);
       
       showToast("Call Completed: Voicemail", `AI Agent left a tailored voicemail for ${lead.name}.`, "info");
@@ -219,6 +236,30 @@ export default function DashboardPage() {
               )}
             </div>
 
+            {/* Custom Phone Dialer */}
+            <div className="bg-white rounded-xl border shadow-sm p-4 flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-slate-800">Test Custom Number</h3>
+                <p className="text-xs text-slate-500">Enter your phone number to test the real-time AI dialer routing.</p>
+              </div>
+              <div className="flex space-x-2">
+                <input 
+                  type="text" 
+                  placeholder="+1 (555) 000-0000" 
+                  value={customNumber}
+                  onChange={(e) => setCustomNumber(e.target.value)}
+                  className="border border-slate-200 rounded-lg px-3 py-2 text-sm w-48 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+                <button 
+                  onClick={handleCustomCall}
+                  disabled={!customNumber}
+                  className="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition disabled:opacity-50"
+                >
+                  Dial Now
+                </button>
+              </div>
+            </div>
+
             {/* Leads Table */}
             <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
               <div className="p-4 border-b bg-slate-50 flex justify-between items-center">
@@ -276,16 +317,20 @@ export default function DashboardPage() {
               </h3>
               <div className="grid grid-cols-2 gap-4">
                 {meetings.map(m => (
-                  <div key={m.id} className="border border-slate-100 bg-slate-50 p-4 rounded-lg flex justify-between items-center">
+                  <button 
+                    key={m.id} 
+                    onClick={() => setSelectedMeeting(m)}
+                    className="border border-slate-100 bg-slate-50 hover:bg-slate-100 hover:border-slate-300 transition p-4 rounded-lg flex justify-between items-center text-left"
+                  >
                     <div>
                       <p className="font-bold text-slate-900">{m.prospect}</p>
-                      <p className="text-xs font-medium text-emerald-600 mt-1">Synced to Calendar</p>
+                      <p className="text-xs font-medium text-emerald-600 mt-1 flex items-center"><CheckCircle2 className="w-3 h-3 mr-1" /> Synced to Google Calendar</p>
                     </div>
                     <div className="text-right">
                       <p className="font-semibold text-indigo-900">{m.date}</p>
                       <p className="text-sm text-slate-500">{m.time}</p>
                     </div>
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
@@ -452,6 +497,38 @@ export default function DashboardPage() {
         )}
 
       </div>
+
+      {/* Prospect Details Modal (Clickable Calendar) */}
+      {selectedMeeting && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] flex items-center justify-center animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-[500px] border border-slate-200 overflow-hidden relative">
+             <button onClick={() => setSelectedMeeting(null)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+             </button>
+             <div className="bg-indigo-50 border-b border-indigo-100 p-6">
+                <h3 className="font-bold text-2xl text-slate-900">{selectedMeeting.prospect}</h3>
+                <p className="text-indigo-600 font-medium flex items-center mt-1"><Briefcase className="w-4 h-4 mr-1" /> {selectedMeeting.role} at {selectedMeeting.company}</p>
+             </div>
+             <div className="p-6 space-y-6">
+                <div className="flex items-center space-x-4 bg-emerald-50 text-emerald-800 p-4 rounded-xl border border-emerald-100">
+                  <Calendar className="w-8 h-8 text-emerald-600" />
+                  <div>
+                    <p className="font-bold text-sm uppercase tracking-wide text-emerald-700">Google Calendar Event Setup</p>
+                    <p className="text-sm font-medium">{selectedMeeting.date} @ {selectedMeeting.time}</p>
+                  </div>
+                </div>
+                <div>
+                   <h4 className="font-semibold text-slate-900 flex items-center text-sm mb-2"><Phone className="w-4 h-4 mr-2" /> Contact Info</h4>
+                   <p className="text-slate-600 text-sm font-medium bg-slate-50 border p-3 rounded-lg">{selectedMeeting.phone}</p>
+                </div>
+                <div>
+                   <h4 className="font-semibold text-slate-900 flex items-center text-sm mb-2"><StickyNote className="w-4 h-4 mr-2" /> AI Assistant Notes & Summary</h4>
+                   <p className="text-slate-600 text-sm italic bg-slate-50 border p-4 rounded-lg leading-relaxed">"{selectedMeeting.summary}"</p>
+                </div>
+             </div>
+          </div>
+        </div>
+      )}
 
       {/* Live AI Call Tracker Modal */}
       {activeCall && (
