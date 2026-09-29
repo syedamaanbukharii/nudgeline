@@ -75,9 +75,9 @@ export default function DashboardPage() {
         <div className="mb-8">
           <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Role Simulation</h2>
           <div className="flex flex-col space-y-2">
-            <button onClick={() => setRole("admin")} className={`px-3 py-2 text-sm text-left rounded-md transition ${role === 'admin' ? 'bg-indigo-600 text-white' : 'hover:bg-slate-800'}`}>👑 Admin / Owner</button>
-            <button onClick={() => setRole("manager")} className={`px-3 py-2 text-sm text-left rounded-md transition ${role === 'manager' ? 'bg-indigo-600 text-white' : 'hover:bg-slate-800'}`}>📊 Team Manager</button>
-            <button onClick={() => setRole("rep")} className={`px-3 py-2 text-sm text-left rounded-md transition ${role === 'rep' ? 'bg-indigo-600 text-white' : 'hover:bg-slate-800'}`}>📞 BD Rep (Member)</button>
+            <button onClick={() => { setRole("admin"); setActiveTab("dashboard"); }} className={`px-3 py-2 text-sm text-left rounded-md transition ${role === 'admin' ? 'bg-indigo-600 text-white' : 'hover:bg-slate-800'}`}>👑 Admin / Owner</button>
+            <button onClick={() => { setRole("manager"); setActiveTab("dashboard"); }} className={`px-3 py-2 text-sm text-left rounded-md transition ${role === 'manager' ? 'bg-indigo-600 text-white' : 'hover:bg-slate-800'}`}>📊 Team Manager</button>
+            <button onClick={() => { setRole("rep"); setActiveTab("dialer"); }} className={`px-3 py-2 text-sm text-left rounded-md transition ${role === 'rep' ? 'bg-indigo-600 text-white' : 'hover:bg-slate-800'}`}>📞 BD Rep (Member)</button>
           </div>
         </div>
 
@@ -97,6 +97,17 @@ export default function DashboardPage() {
             <button onClick={() => setActiveTab("campaigns")} className={`w-full flex items-center space-x-3 px-3 py-2 text-sm rounded-md transition ${activeTab === 'campaigns' ? 'bg-slate-800 text-white' : 'hover:bg-slate-800'}`}>
               <Users className="w-4 h-4" /> <span>Team Campaigns</span>
             </button>
+          )}
+
+          {role === 'admin' && (
+            <>
+              <button onClick={() => setActiveTab("compliance")} className={`w-full flex items-center space-x-3 px-3 py-2 text-sm rounded-md transition ${activeTab === 'compliance' ? 'bg-slate-800 text-white' : 'hover:bg-slate-800'}`}>
+                <ShieldCheck className="w-4 h-4" /> <span>Compliance Center</span>
+              </button>
+              <button onClick={() => setActiveTab("settings")} className={`w-full flex items-center space-x-3 px-3 py-2 text-sm rounded-md transition ${activeTab === 'settings' ? 'bg-slate-800 text-white' : 'hover:bg-slate-800'}`}>
+                <Settings className="w-4 h-4" /> <span>Integrations</span>
+              </button>
+            </>
           )}
         </nav>
       </div>
@@ -192,7 +203,7 @@ export default function DashboardPage() {
             </div>
             
             {/* AI Booked Meetings */}
-            <div className="bg-white rounded-xl border shadow-sm p-6">
+            <div className="bg-white rounded-xl border shadow-sm p-6 mt-8">
               <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center">
                 <Calendar className="w-5 h-5 mr-2 text-indigo-600" /> Upcoming Meetings (Booked by AI)
               </h3>
@@ -211,18 +222,106 @@ export default function DashboardPage() {
                 ))}
               </div>
             </div>
-
           </div>
         )}
 
-        {/* --- OTHER VIEWS OMITTED FOR BREVITY --- */}
-        {role !== "rep" && (
-           <div className="flex items-center justify-center h-64 border-2 border-dashed border-slate-200 rounded-xl">
-           <div className="text-center">
-             <h3 className="text-lg font-medium text-slate-900">Module available in Manager/Admin mode</h3>
-             <p className="text-slate-500 mt-1">Please select "BD Rep" to view the AI Dialer logic.</p>
-           </div>
-         </div>
+        {/* --- REP DASHBOARD --- */}
+        {role === "rep" && activeTab === "dashboard" && (
+           <div className="space-y-6 max-w-5xl">
+            <div>
+              <h2 className="text-2xl font-bold text-slate-900">My Performance</h2>
+              <p className="text-slate-500">Track your AI's outbound success today.</p>
+            </div>
+            <div className="grid grid-cols-3 gap-6">
+              <div className="bg-white p-6 rounded-xl border shadow-sm">
+                <p className="text-sm font-semibold text-slate-500">AI Calls Dispatched</p>
+                <p className="text-3xl font-bold mt-2">42</p>
+              </div>
+              <div className="bg-white p-6 rounded-xl border shadow-sm">
+                <p className="text-sm font-semibold text-slate-500">Meetings Booked</p>
+                <p className="text-3xl font-bold mt-2 text-emerald-600">3</p>
+              </div>
+              <div className="bg-white p-6 rounded-xl border shadow-sm">
+                <p className="text-sm font-semibold text-slate-500">Connect Rate</p>
+                <p className="text-3xl font-bold mt-2">14%</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* --- MANAGER DASHBOARD VIEW --- */}
+        {role === "manager" && activeTab === "dashboard" && (
+          <div className="space-y-6 max-w-5xl">
+            <div>
+              <h2 className="text-2xl font-bold text-slate-900">Team Manager Dashboard</h2>
+              <p className="text-slate-500">Monitor your BD Reps and active AI campaigns.</p>
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-2">
+              <div className="rounded-xl border bg-white shadow-sm p-6">
+                <h3 className="font-semibold text-lg mb-4">Team: Outbound Alpha</h3>
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-slate-600">Total AI Calls (Today)</span>
+                      <span className="font-medium">150 / 200 Target</span>
+                    </div>
+                    <div className="w-full bg-slate-100 rounded-full h-2">
+                      <div className="bg-indigo-500 h-2 rounded-full" style={{ width: '75%' }}></div>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-slate-600">Meetings Booked</span>
+                      <span className="font-medium">8 / 10 Target</span>
+                    </div>
+                    <div className="w-full bg-slate-100 rounded-full h-2">
+                      <div className="bg-emerald-500 h-2 rounded-full" style={{ width: '80%' }}></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* --- ADMIN DASHBOARD VIEW --- */}
+        {role === "admin" && activeTab === "dashboard" && (
+          <div className="space-y-6 max-w-5xl">
+            <div>
+              <h2 className="text-2xl font-bold text-slate-900">Admin & Platform Overview</h2>
+              <p className="text-slate-500">Global billing, compliance, and organization stats.</p>
+            </div>
+
+            <div className="grid grid-cols-4 gap-6">
+              <div className="bg-white p-6 rounded-xl border shadow-sm">
+                <p className="text-sm font-semibold text-slate-500">Total Telecom Spend</p>
+                <p className="text-2xl font-bold mt-2">$342.50</p>
+              </div>
+              <div className="bg-white p-6 rounded-xl border shadow-sm">
+                <p className="text-sm font-semibold text-slate-500">Active Reps</p>
+                <p className="text-2xl font-bold mt-2">12</p>
+              </div>
+              <div className="bg-white p-6 rounded-xl border shadow-sm">
+                <p className="text-sm font-semibold text-slate-500">DNC Blocks</p>
+                <p className="text-2xl font-bold mt-2 text-rose-600">43</p>
+              </div>
+              <div className="bg-white p-6 rounded-xl border shadow-sm">
+                <p className="text-sm font-semibold text-slate-500">System Health</p>
+                <p className="text-lg font-bold mt-2 text-emerald-600 flex items-center"><CheckCircle2 className="w-5 h-5 mr-1"/> All Systems Go</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Fallback for empty/unimplemented tabs */}
+        {(activeTab === "settings" || activeTab === "compliance" || activeTab === "campaigns") && (
+          <div className="flex items-center justify-center h-64 border-2 border-dashed border-slate-200 rounded-xl mt-6">
+            <div className="text-center">
+              <h3 className="text-lg font-medium text-slate-900">Module under construction</h3>
+              <p className="text-slate-500 mt-1">This specific view ({activeTab}) is coming in a future update.</p>
+            </div>
+          </div>
         )}
 
       </div>
