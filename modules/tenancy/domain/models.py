@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import sqlalchemy as sa
 from sqlalchemy import text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+if TYPE_CHECKING:
+    from datetime import datetime
 
 
 class Base(DeclarativeBase):
@@ -53,9 +55,7 @@ class Tenant(Base, TimestampMixin):
 
     __tablename__ = "tenants"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(sa.String(255), nullable=False)
     slug: Mapped[str] = mapped_column(sa.String(63), unique=True, nullable=False)
     plan: Mapped[str] = mapped_column(sa.String(50), server_default="free", nullable=False)
@@ -72,13 +72,9 @@ class User(Base, TimestampMixin, TenantMixin):
     """User within a tenant."""
 
     __tablename__ = "users"
-    __table_args__ = (
-        sa.UniqueConstraint("tenant_id", "email", name="uq_users_tenant_email"),
-    )
+    __table_args__ = (sa.UniqueConstraint("tenant_id", "email", name="uq_users_tenant_email"),)
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     email: Mapped[str] = mapped_column(sa.String(320), nullable=False)
     full_name: Mapped[str] = mapped_column(sa.String(255), nullable=False)
     role: Mapped[str] = mapped_column(
@@ -96,16 +92,12 @@ class APIKey(Base, TimestampMixin, TenantMixin):
 
     __tablename__ = "api_keys"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     key_hash: Mapped[str] = mapped_column(sa.String(128), unique=True, nullable=False)
     key_prefix: Mapped[str] = mapped_column(sa.String(12), nullable=False)  # nl_live_xxxx
     name: Mapped[str] = mapped_column(sa.String(100), nullable=False)
     scopes: Mapped[list[str]] = mapped_column(JSONB, server_default="[]", nullable=False)
-    created_by: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), sa.ForeignKey("users.id"), nullable=False
-    )
+    created_by: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), sa.ForeignKey("users.id"), nullable=False)
     expires_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
     last_used_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
     is_active: Mapped[bool] = mapped_column(sa.Boolean, server_default="true", nullable=False)
@@ -116,9 +108,7 @@ class OutboxEvent(Base):
 
     __tablename__ = "outbox"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     tenant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     topic: Mapped[str] = mapped_column(sa.String(100), nullable=False)
     payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
@@ -132,13 +122,9 @@ class ScheduledAction(Base):
     """Durable scheduled actions with SKIP LOCKED polling."""
 
     __tablename__ = "scheduled_actions"
-    __table_args__ = (
-        sa.Index("ix_scheduled_actions_due", "status", "due_at"),
-    )
+    __table_args__ = (sa.Index("ix_scheduled_actions_due", "status", "due_at"),)
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     tenant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     kind: Mapped[str] = mapped_column(sa.String(50), nullable=False)
     payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
@@ -173,9 +159,7 @@ class AuditLogEntry(Base):
 
     __tablename__ = "audit_log"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     tenant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     action: Mapped[str] = mapped_column(sa.String(100), nullable=False)

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Protocol, Any
+from typing import Any, Protocol
 
 
 class EmailPort(Protocol):
@@ -10,10 +10,10 @@ class EmailPort(Protocol):
 
     async def send_email(self, message: dict[str, Any]) -> str:
         """Send an email from the rep's mailbox.
-        
+
         Args:
             message: Dictionary containing to, subject, body, etc.
-            
+
         Returns:
             Provider message ID.
         """

@@ -5,13 +5,17 @@ Revises: 0003
 Create Date: 2026-09-28
 
 """
+
 from __future__ import annotations
 
-from collections.abc import Sequence
+from typing import TYPE_CHECKING
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects import postgresql
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 revision: str = "0004"
 down_revision: str | None = "0003"
@@ -31,8 +35,11 @@ def upgrade() -> None:
         sa.Column("attestation", sa.String(length=10), nullable=True),
         sa.Column("cnam_status", sa.String(length=20), nullable=True),
         sa.Column("daily_cap", sa.Integer(), server_default="100", nullable=False),
-        sa.ForeignKeyConstraint(["tenant_id"], ["tenants.id"], ),
-        sa.PrimaryKeyConstraint("id")
+        sa.ForeignKeyConstraint(
+            ["tenant_id"],
+            ["tenants.id"],
+        ),
+        sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(op.f("ix_phone_numbers_e164"), "phone_numbers", ["e164"], unique=False)
     op.create_index(op.f("ix_phone_numbers_tenant_id"), "phone_numbers", ["tenant_id"], unique=False)
@@ -53,8 +60,11 @@ def upgrade() -> None:
         sa.Column("created_by", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
-        sa.ForeignKeyConstraint(["tenant_id"], ["tenants.id"], ),
-        sa.PrimaryKeyConstraint("id")
+        sa.ForeignKeyConstraint(
+            ["tenant_id"],
+            ["tenants.id"],
+        ),
+        sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(op.f("ix_campaigns_tenant_id"), "campaigns", ["tenant_id"], unique=False)
 
@@ -72,9 +82,15 @@ def upgrade() -> None:
         sa.Column("approved_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
-        sa.ForeignKeyConstraint(["campaign_id"], ["campaigns.id"], ),
-        sa.ForeignKeyConstraint(["tenant_id"], ["tenants.id"], ),
-        sa.PrimaryKeyConstraint("id")
+        sa.ForeignKeyConstraint(
+            ["campaign_id"],
+            ["campaigns.id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["tenant_id"],
+            ["tenants.id"],
+        ),
+        sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(op.f("ix_script_versions_tenant_id"), "script_versions", ["tenant_id"], unique=False)
 
@@ -88,10 +104,19 @@ def upgrade() -> None:
         sa.Column("attempts", sa.Integer(), server_default="0", nullable=False),
         sa.Column("next_attempt_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("last_outcome", sa.String(length=50), nullable=True),
-        sa.ForeignKeyConstraint(["campaign_id"], ["campaigns.id"], ),
-        sa.ForeignKeyConstraint(["contact_id"], ["contacts.id"], ),
-        sa.ForeignKeyConstraint(["tenant_id"], ["tenants.id"], ),
-        sa.PrimaryKeyConstraint("campaign_id", "contact_id")
+        sa.ForeignKeyConstraint(
+            ["campaign_id"],
+            ["campaigns.id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["contact_id"],
+            ["contacts.id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["tenant_id"],
+            ["tenants.id"],
+        ),
+        sa.PrimaryKeyConstraint("campaign_id", "contact_id"),
     )
     op.create_index(op.f("ix_campaign_contacts_tenant_id"), "campaign_contacts", ["tenant_id"], unique=False)
 
@@ -117,8 +142,11 @@ def upgrade() -> None:
         sa.Column("extracted", postgresql.JSONB(astext_type=sa.Text()), server_default="{}", nullable=False),
         sa.Column("rule_decision", postgresql.JSONB(astext_type=sa.Text()), server_default="{}", nullable=False),
         sa.Column("cost_inr", sa.Numeric(precision=12, scale=4), server_default="0.0000", nullable=False),
-        sa.ForeignKeyConstraint(["tenant_id"], ["tenants.id"], ),
-        sa.PrimaryKeyConstraint("id")
+        sa.ForeignKeyConstraint(
+            ["tenant_id"],
+            ["tenants.id"],
+        ),
+        sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(op.f("ix_calls_tenant_id"), "calls", ["tenant_id"], unique=False)
     op.create_index(op.f("ix_calls_campaign_id"), "calls", ["campaign_id"], unique=False)
@@ -132,36 +160,54 @@ def upgrade() -> None:
         sa.Column("ts", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
         sa.Column("type", sa.String(length=50), nullable=False),
         sa.Column("payload", postgresql.JSONB(astext_type=sa.Text()), server_default="{}", nullable=False),
-        sa.ForeignKeyConstraint(["call_id"], ["calls.id"], ),
-        sa.ForeignKeyConstraint(["tenant_id"], ["tenants.id"], ),
-        sa.PrimaryKeyConstraint("call_id", "ts", "type")
+        sa.ForeignKeyConstraint(
+            ["call_id"],
+            ["calls.id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["tenant_id"],
+            ["tenants.id"],
+        ),
+        sa.PrimaryKeyConstraint("call_id", "ts", "type"),
     )
     op.create_index(op.f("ix_call_events_tenant_id"), "call_events", ["tenant_id"], unique=False)
 
     # RLS Policies
     op.execute("ALTER TABLE phone_numbers ENABLE ROW LEVEL SECURITY")
     op.execute("ALTER TABLE phone_numbers FORCE ROW LEVEL SECURITY")
-    op.execute("CREATE POLICY tenant_isolation_policy ON phone_numbers USING (tenant_id = current_setting('app.tenant_id')::uuid)")
+    op.execute(
+        "CREATE POLICY tenant_isolation_policy ON phone_numbers USING (tenant_id = current_setting('app.tenant_id')::uuid)"
+    )
 
     op.execute("ALTER TABLE campaigns ENABLE ROW LEVEL SECURITY")
     op.execute("ALTER TABLE campaigns FORCE ROW LEVEL SECURITY")
-    op.execute("CREATE POLICY tenant_isolation_policy ON campaigns USING (tenant_id = current_setting('app.tenant_id')::uuid)")
+    op.execute(
+        "CREATE POLICY tenant_isolation_policy ON campaigns USING (tenant_id = current_setting('app.tenant_id')::uuid)"
+    )
 
     op.execute("ALTER TABLE script_versions ENABLE ROW LEVEL SECURITY")
     op.execute("ALTER TABLE script_versions FORCE ROW LEVEL SECURITY")
-    op.execute("CREATE POLICY tenant_isolation_policy ON script_versions USING (tenant_id = current_setting('app.tenant_id')::uuid)")
+    op.execute(
+        "CREATE POLICY tenant_isolation_policy ON script_versions USING (tenant_id = current_setting('app.tenant_id')::uuid)"
+    )
 
     op.execute("ALTER TABLE campaign_contacts ENABLE ROW LEVEL SECURITY")
     op.execute("ALTER TABLE campaign_contacts FORCE ROW LEVEL SECURITY")
-    op.execute("CREATE POLICY tenant_isolation_policy ON campaign_contacts USING (tenant_id = current_setting('app.tenant_id')::uuid)")
+    op.execute(
+        "CREATE POLICY tenant_isolation_policy ON campaign_contacts USING (tenant_id = current_setting('app.tenant_id')::uuid)"
+    )
 
     op.execute("ALTER TABLE calls ENABLE ROW LEVEL SECURITY")
     op.execute("ALTER TABLE calls FORCE ROW LEVEL SECURITY")
-    op.execute("CREATE POLICY tenant_isolation_policy ON calls USING (tenant_id = current_setting('app.tenant_id')::uuid)")
+    op.execute(
+        "CREATE POLICY tenant_isolation_policy ON calls USING (tenant_id = current_setting('app.tenant_id')::uuid)"
+    )
 
     op.execute("ALTER TABLE call_events ENABLE ROW LEVEL SECURITY")
     op.execute("ALTER TABLE call_events FORCE ROW LEVEL SECURITY")
-    op.execute("CREATE POLICY tenant_isolation_policy ON call_events USING (tenant_id = current_setting('app.tenant_id')::uuid)")
+    op.execute(
+        "CREATE POLICY tenant_isolation_policy ON call_events USING (tenant_id = current_setting('app.tenant_id')::uuid)"
+    )
 
 
 def downgrade() -> None:

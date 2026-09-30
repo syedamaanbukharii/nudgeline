@@ -2,18 +2,20 @@
 
 from __future__ import annotations
 
-import os
-from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from typing import TYPE_CHECKING
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import ORJSONResponse
+from modules.tenancy.domain.settings import get_settings
 
 from apps.api.middleware.errors import register_error_handlers
 from apps.api.middleware.logging import configure_logging
 from apps.api.middleware.request_id import RequestIDMiddleware
-from modules.tenancy.domain.settings import get_settings
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
 
 
 @asynccontextmanager
@@ -50,7 +52,8 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    from apps.api.routers import campaigns, live, webhooks, dashboards
+    from apps.api.routers import campaigns, dashboards, live, webhooks
+
     app.include_router(campaigns.router)
     app.include_router(live.router)
     app.include_router(webhooks.router)

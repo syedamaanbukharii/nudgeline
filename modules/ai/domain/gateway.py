@@ -3,11 +3,8 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
 
-from modules.tenancy.domain.settings import get_settings
 import yaml
-from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -22,20 +19,15 @@ class AIGateway:
     def _load_config(self) -> None:
         """Load model configuration from yaml."""
         try:
-            with open(self.config_path, "r") as f:
+            with open(self.config_path) as f:
                 self.config = yaml.safe_load(f)
         except Exception as e:
             logger.error(f"Failed to load model config: {e}")
             self.config = {"providers": {}, "tasks": {}}
 
-    async def generate_completion(
-        self,
-        task: str,
-        messages: list[dict[str, str]],
-        contains_pii: bool = True
-    ) -> str:
+    async def generate_completion(self, task: str, messages: list[dict[str, str]], contains_pii: bool = True) -> str:
         """Generate a completion for a specific task.
-        
+
         Args:
             task: The task name (e.g. 'live_turn', 'extraction')
             messages: Conversation history/prompts
@@ -44,20 +36,18 @@ class AIGateway:
         task_config = self.config.get("tasks", {}).get(task)
         if not task_config:
             raise ValueError(f"Unknown AI task: {task}")
-            
+
         provider_name = task_config.get("provider")
         model = task_config.get("model")
-        
+
         provider_config = self.config.get("providers", {}).get(provider_name, {})
-        
+
         # Security/Privacy Enforcement
         if contains_pii and not provider_config.get("allowed_for_pii", False):
-            raise PermissionError(
-                f"Provider {provider_name} is not allowed to process PII data."
-            )
-            
+            raise PermissionError(f"Provider {provider_name} is not allowed to process PII data.")
+
         logger.info(f"Routing to {provider_name} ({model}) for task {task}")
-        
+
         # MVP: Return a fake response instead of actually calling LLM APIs
         # In a real environment we would switch between OpenAI-compatible clients (Groq, vLLM)
         # or the Gemini SDK.

@@ -1,5 +1,6 @@
 from typing import Protocol
 
+
 class LineTypePort(Protocol):
     async def lookup_line_type(self, phone_number: str) -> str:
         """

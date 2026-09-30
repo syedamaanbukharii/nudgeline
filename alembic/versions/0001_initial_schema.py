@@ -5,13 +5,17 @@ Revises:
 Create Date: 2026-09-28
 
 """
+
 from __future__ import annotations
 
-from collections.abc import Sequence
+from typing import TYPE_CHECKING
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects.postgresql import JSONB, UUID
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 revision: str = "0001"
 down_revision: str | None = None
@@ -129,8 +133,7 @@ def upgrade() -> None:
         op.execute(f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY")
         op.execute(f"ALTER TABLE {table} FORCE ROW LEVEL SECURITY")
         op.execute(
-            f"CREATE POLICY tenant_isolation ON {table} "
-            f"USING (tenant_id = current_setting('app.tenant_id')::uuid)"
+            f"CREATE POLICY tenant_isolation ON {table} USING (tenant_id = current_setting('app.tenant_id')::uuid)"
         )
 
     # Outbox, scheduled_actions, audit_log: RLS on tenant_id too
@@ -138,17 +141,13 @@ def upgrade() -> None:
         op.execute(f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY")
         op.execute(f"ALTER TABLE {table} FORCE ROW LEVEL SECURITY")
         op.execute(
-            f"CREATE POLICY tenant_isolation ON {table} "
-            f"USING (tenant_id = current_setting('app.tenant_id')::uuid)"
+            f"CREATE POLICY tenant_isolation ON {table} USING (tenant_id = current_setting('app.tenant_id')::uuid)"
         )
 
     # Tenants table: RLS by own id
     op.execute("ALTER TABLE tenants ENABLE ROW LEVEL SECURITY")
     op.execute("ALTER TABLE tenants FORCE ROW LEVEL SECURITY")
-    op.execute(
-        "CREATE POLICY tenant_isolation ON tenants "
-        "USING (id = current_setting('app.tenant_id')::uuid)"
-    )
+    op.execute("CREATE POLICY tenant_isolation ON tenants USING (id = current_setting('app.tenant_id')::uuid)")
 
 
 def downgrade() -> None:

@@ -2,18 +2,18 @@
 
 from __future__ import annotations
 
-import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
+from typing import TYPE_CHECKING
 
 import structlog
-from fastapi import Request
-from sqlalchemy import select
-from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
-from starlette.responses import Response
-
-from apps.api.middleware.errors import ProblemDetail
 from modules.tenancy.adapters.database import get_session_factory
 from modules.tenancy.domain.models import IdempotencyRecord
+from sqlalchemy import select
+from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
+
+if TYPE_CHECKING:
+    from fastapi import Request
+    from starlette.responses import Response
 
 logger = structlog.get_logger()
 
@@ -46,7 +46,7 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
             existing = result.scalar_one_or_none()
 
             if existing is not None:
-                if existing.expires_at < datetime.now(timezone.utc):
+                if existing.expires_at < datetime.now(UTC):
                     await session.delete(existing)
                     await session.commit()
                 else:
@@ -81,7 +81,7 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
                     tenant_id=tenant_id,
                     status_code=response.status_code,
                     response_body=response_data,
-                    expires_at=datetime.now(timezone.utc) + _IDEMPOTENCY_TTL,
+                    expires_at=datetime.now(UTC) + _IDEMPOTENCY_TTL,
                 )
                 session.add(record)
                 await session.commit()

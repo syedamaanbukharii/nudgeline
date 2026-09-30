@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-import uuid
-from collections.abc import AsyncIterator
+from typing import TYPE_CHECKING
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
@@ -13,6 +12,10 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from modules.tenancy.domain.settings import get_settings
+
+if TYPE_CHECKING:
+    import uuid
+    from collections.abc import AsyncIterator
 
 _engine = None
 _session_factory: async_sessionmaker[AsyncSession] | None = None

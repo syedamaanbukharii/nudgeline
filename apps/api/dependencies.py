@@ -3,15 +3,16 @@
 from __future__ import annotations
 
 import uuid
-from collections.abc import AsyncIterator
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
 
 import structlog
-from fastapi import Depends, Header, HTTPException, Request
-from sqlalchemy.ext.asyncio import AsyncSession
-
+from fastapi import Depends, HTTPException, Request
 from modules.tenancy.adapters.database import get_db_session
 from modules.tenancy.domain.settings import Settings, get_settings
+from sqlalchemy.ext.asyncio import AsyncSession
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
 
 logger = structlog.get_logger()
 

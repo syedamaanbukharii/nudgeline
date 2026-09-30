@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import hmac
 import hashlib
+import hmac
 import logging
 from typing import Any
 
@@ -21,7 +21,7 @@ class WebhookReceiverService:
         self, provider: str, tenant_id: str, payload: bytes, signature: str, event_id: str
     ) -> None:
         """Process an incoming webhook securely."""
-        
+
         # 1. Idempotency Check
         # If we already processed this event_id, skip it.
         if await self.idempotency_store.exists(event_id):
@@ -34,10 +34,8 @@ class WebhookReceiverService:
             logger.warning(f"No webhook secret configured for {provider} / {tenant_id}")
             raise ValueError("Webhook secret not found")
 
-        expected_sig = hmac.new(
-            secret.encode(), payload, hashlib.sha256
-        ).hexdigest()
-        
+        expected_sig = hmac.new(secret.encode(), payload, hashlib.sha256).hexdigest()
+
         # Note: Depending on provider, signature verification logic (headers, hashes) will differ.
         # This is a generic SHA256 HMAC example.
         if not hmac.compare_digest(expected_sig, signature):
@@ -46,6 +44,6 @@ class WebhookReceiverService:
 
         # 3. Processing (Enqueue for async processing)
         logger.info(f"Verified webhook {event_id}. Enqueueing for processing.")
-        
+
         # 4. Mark as processed
         await self.idempotency_store.set(event_id, True)

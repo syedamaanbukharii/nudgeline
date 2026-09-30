@@ -17,7 +17,7 @@ CallState = Literal[
     "TRANSFERRED",
     "ENDED",
     "POST_PROCESSING",
-    "CLOSED"
+    "CLOSED",
 ]
 
 # Outcomes on CLOSED
@@ -28,7 +28,7 @@ CallOutcome = Literal[
     "WRONG_CONTACT",
     "DO_NOT_CALL",
     "GATEKEEPER",
-    "NEEDS_REVIEW"
+    "NEEDS_REVIEW",
 ]
 
 
@@ -39,15 +39,15 @@ class CallStateMachine:
         "QUEUED": {"ELIGIBILITY_CHECK"},
         "ELIGIBILITY_CHECK": {"SKIPPED", "WAITING_CAPACITY"},
         "WAITING_CAPACITY": {"DIALING"},
-        "DIALING": {"RINGING", "ENDED"}, # ENDED on failed dial
-        "RINGING": {"CONNECTED", "ENDED"}, # ENDED on no answer/voicemail
+        "DIALING": {"RINGING", "ENDED"},  # ENDED on failed dial
+        "RINGING": {"CONNECTED", "ENDED"},  # ENDED on no answer/voicemail
         "CONNECTED": {"IN_CONVERSATION"},
         "IN_CONVERSATION": {"TRANSFERRED", "ENDED"},
         "TRANSFERRED": {"ENDED"},
         "ENDED": {"POST_PROCESSING"},
         "POST_PROCESSING": {"CLOSED"},
         "SKIPPED": set(),
-        "CLOSED": set()
+        "CLOSED": set(),
     }
 
     def __init__(self, initial_state: CallState = "QUEUED"):

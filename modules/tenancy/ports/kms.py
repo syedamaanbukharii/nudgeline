@@ -10,7 +10,7 @@ class KMSPort(Protocol):
 
     async def generate_data_key(self, tenant_id: str) -> tuple[bytes, bytes]:
         """Generate a new data key.
-        
+
         Returns:
             Tuple of (plaintext_key, encrypted_key).
         """

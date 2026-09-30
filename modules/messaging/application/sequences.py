@@ -28,11 +28,11 @@ class SequenceService:
 
     async def process_reply_webhook(self, thread_id: str) -> None:
         """Handle an incoming reply webhook from Gmail/Graph.
-        
+
         This triggers stop rules for any active sequence enrollments.
         """
         logger.info(f"Received reply for thread {thread_id}. Applying stop rules.")
-        # Logic: 
+        # Logic:
         # 1. Find EmailMessage by thread_id
         # 2. Update replied_at
         # 3. Find SequenceEnrollment

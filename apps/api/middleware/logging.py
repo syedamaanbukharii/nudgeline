@@ -2,18 +2,18 @@
 
 from __future__ import annotations
 
-import re
 import logging
+import re
 import sys
 
 import structlog
 
 # Patterns for PII redaction
 _PII_PATTERNS = [
-    (re.compile(r'"?(?:phone|mobile|tel)["\s:=]+["\s]*([+]?\d[\d\s\-().]{6,18}\d)'), '[REDACTED_PHONE]'),
-    (re.compile(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+'), '[REDACTED_EMAIL]'),
-    (re.compile(r'(?:Bearer|Basic)\s+[A-Za-z0-9\-._~+/]+=*'), '[REDACTED_TOKEN]'),
-    (re.compile(r'(?:Authorization|X-Api-Key)["\s:=]+\S+'), '[REDACTED_AUTH]'),
+    (re.compile(r'"?(?:phone|mobile|tel)["\s:=]+["\s]*([+]?\d[\d\s\-().]{6,18}\d)'), "[REDACTED_PHONE]"),
+    (re.compile(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+"), "[REDACTED_EMAIL]"),
+    (re.compile(r"(?:Bearer|Basic)\s+[A-Za-z0-9\-._~+/]+=*"), "[REDACTED_TOKEN]"),
+    (re.compile(r'(?:Authorization|X-Api-Key)["\s:=]+\S+'), "[REDACTED_AUTH]"),
 ]
 
 

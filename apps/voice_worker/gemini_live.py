@@ -3,8 +3,6 @@
 import asyncio
 import logging
 import os
-import wave
-from typing import Callable, Any
 
 from google import genai
 from google.genai import types
@@ -13,25 +11,31 @@ logger = logging.getLogger(__name__)
 
 # --- Nudgeline Tools ---
 
+
 def get_slots(timezone: str) -> str:
     """Get available meeting slots for the assigned rep."""
     return "Tuesday at 2 PM, Wednesday at 10 AM"
+
 
 def book_meeting(slot_id: str) -> str:
     """Book a meeting into the rep's calendar."""
     return "Meeting booked successfully."
 
+
 def set_callback(due_at: str, note: str) -> str:
     """Set a callback reminder for the rep to call the contact back."""
     return "Callback reminder set."
+
 
 def mark_dnc() -> str:
     """Mark the contact as Do Not Call (DNC)."""
     return "Contact marked as Do Not Call."
 
+
 def transfer_to_human() -> str:
     """Transfer the call to a human representative."""
     return "Transferring call now."
+
 
 def end_call() -> str:
     """End the call."""
@@ -44,7 +48,7 @@ class GeminiLiveVoiceWorker:
     def __init__(self, api_key: str | None = None):
         self.client = genai.Client(api_key=api_key or os.environ.get("GEMINI_API_KEY"))
         self.model = "gemini-3.1-flash-live-preview"
-        
+
         self.config = types.LiveConnectConfig(
             response_modalities=[types.Modality.AUDIO],
             system_instruction=types.Content(
@@ -56,19 +60,19 @@ class GeminiLiveVoiceWorker:
                     )
                 ]
             ),
-            tools=[get_slots, book_meeting, set_callback, mark_dnc, transfer_to_human, end_call]
+            tools=[get_slots, book_meeting, set_callback, mark_dnc, transfer_to_human, end_call],
         )
 
     async def start_session(self):
         """Connects to Gemini Live API and starts the bidirectional session."""
         logger.info(f"Connecting to {self.model}...")
-        
+
         async with self.client.aio.live.connect(model=self.model, config=self.config) as session:
             logger.info("Session established.")
-            
+
             # Start concurrent send and receive tasks
             receive_task = asyncio.create_task(self._receive_loop(session))
-            
+
             try:
                 # E.g. Send a simulated microphone stream
                 await asyncio.sleep(600)  # Keep session alive for 10 minutes max
@@ -97,7 +101,7 @@ class GeminiLiveVoiceWorker:
                             func_name = part.function_call.name
                             func_args = part.function_call.args
                             logger.info(f"Model called function: {func_name} with {func_args}")
-                            
+
                             # Execute local function and return result (simplified)
                             tool_result = {"status": "ok"}
                             await session.send_realtime_input(
@@ -109,7 +113,7 @@ class GeminiLiveVoiceWorker:
                     logger.info(f"User: {content.input_transcription.text}")
                 if content.output_transcription:
                     logger.info(f"Gemini: {content.output_transcription.text}")
-                    
+
                 # 3. Handle Interruptions
                 if content.interrupted:
                     logger.info("VAD Interruption detected. Halting playback.")

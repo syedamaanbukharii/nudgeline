@@ -2,20 +2,18 @@
 
 import asyncio
 import logging
-import os
 
-from livekit.agents import AutoSubscribe, JobContext, JobProcess, WorkerOptions, cli, llm
+from livekit.agents import AutoSubscribe, JobContext, WorkerOptions, cli, llm
 from livekit.agents.pipeline import VoicePipelineAgent
 from livekit.plugins import openai, silero
 
-from modules.tenancy.domain.settings import get_settings
-
 logger = logging.getLogger(__name__)
+
 
 # Define the allowed tools for the agent
 class NudgelineTools(llm.FunctionContext):
     """The six allow-listed tools for the voice agent."""
-    
+
     @llm.ai_callable(description="Get available meeting slots for the assigned rep.")
     async def get_slots(self, timezone: str) -> str:
         # Mock logic
@@ -51,18 +49,18 @@ def preflight(ctx: JobContext):
 async def entrypoint(ctx: JobContext):
     """Entrypoint for the voice agent."""
     logger.info(f"Agent starting in room {ctx.room.name}")
-    
+
     await ctx.connect(auto_subscribe=AutoSubscribe.AUDIO_ONLY)
 
     # In production, STT and TTS would point to our custom services via a custom LiveKit plugin.
     # Here we mock it with OpenAI plugins configured to point to our local/fake endpoints,
     # or just use the default OpenAI plugin if keys are missing (they will fail gracefully).
-    
+
     agent = VoicePipelineAgent(
         vad=silero.VAD.load(),
-        stt=openai.STT(), # Would be our custom faster-whisper STT port
-        llm=openai.LLM(model="llama3-8b-8192"), # Would use Groq via LLM Gateway
-        tts=openai.TTS(), # Would be our custom Kokoro TTS port
+        stt=openai.STT(),  # Would be our custom faster-whisper STT port
+        llm=openai.LLM(model="llama3-8b-8192"),  # Would use Groq via LLM Gateway
+        tts=openai.TTS(),  # Would be our custom Kokoro TTS port
         fnc_ctx=NudgelineTools(),
         chat_ctx=llm.ChatContext().append(
             role="system",
@@ -75,7 +73,7 @@ async def entrypoint(ctx: JobContext):
     )
 
     agent.start(ctx.room)
-    
+
     await asyncio.sleep(1)
     await agent.say("Hi, I'm an AI calling on behalf of Nudgeline. How are you today?", allow_interruptions=True)
 

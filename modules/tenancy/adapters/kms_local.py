@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import base64
 import os
-from typing import ClassVar
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
@@ -14,14 +13,14 @@ from modules.tenancy.ports.kms import KMSPort
 
 class LocalKMSAdapter(KMSPort):
     """Local KMS using a single master key from environment variables.
-    
+
     WARNING: For development only. In production, use AWS KMS or GCP Cloud KMS.
     """
 
     def __init__(self, master_key_b64: str | None = None) -> None:
         if master_key_b64 is None:
             master_key_b64 = get_settings().encryption_master_key
-        
+
         # Pad if missing, must decode to 32 bytes for AES-256
         try:
             self._master_key = base64.b64decode(master_key_b64)
@@ -30,7 +29,7 @@ class LocalKMSAdapter(KMSPort):
                 self._master_key = os.urandom(32)
         except Exception:
             self._master_key = os.urandom(32)
-            
+
         self._aead = AESGCM(self._master_key)
 
     async def generate_data_key(self, tenant_id: str) -> tuple[bytes, bytes]:
@@ -41,7 +40,7 @@ class LocalKMSAdapter(KMSPort):
         # Include tenant_id as associated data to bind the key
         aad = tenant_id.encode()
         encrypted_key_payload = self._aead.encrypt(nonce, plaintext_key, aad)
-        
+
         # Prepend nonce to the encrypted payload
         encrypted_key = nonce + encrypted_key_payload
         return plaintext_key, encrypted_key

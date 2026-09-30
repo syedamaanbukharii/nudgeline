@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 import time
+from typing import TYPE_CHECKING
 
 import structlog
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
-from starlette.requests import Request
-from starlette.responses import Response
 
 from apps.api.middleware.errors import ProblemDetail
+
+if TYPE_CHECKING:
+    from starlette.requests import Request
+    from starlette.responses import Response
 
 logger = structlog.get_logger()
 
@@ -57,9 +60,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         tenant_id = getattr(request.state, "tenant_id", None)
 
         if api_key_id:
-            allowed, headers = await self._check(
-                f"rl:key:{api_key_id}", self.per_key
-            )
+            allowed, headers = await self._check(f"rl:key:{api_key_id}", self.per_key)
             if not allowed:
                 raise ProblemDetail(
                     status=429,
@@ -69,9 +70,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 )
 
         if tenant_id:
-            allowed, headers = await self._check(
-                f"rl:tenant:{tenant_id}", self.per_tenant
-            )
+            allowed, headers = await self._check(f"rl:tenant:{tenant_id}", self.per_tenant)
             if not allowed:
                 raise ProblemDetail(
                     status=429,
@@ -88,9 +87,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         burst = rate
         now = time.time()
 
-        result = await self.valkey_pool.eval(
-            _GCRA_SCRIPT, 1, key, emission_interval, burst, now
-        )
+        result = await self.valkey_pool.eval(_GCRA_SCRIPT, 1, key, emission_interval, burst, now)
 
         allowed = bool(result[0])
         headers = {

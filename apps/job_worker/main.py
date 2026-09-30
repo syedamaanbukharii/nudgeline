@@ -2,15 +2,14 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import structlog
 from arq import cron
 from arq.connections import RedisSettings
-from sqlalchemy import select, text, update
-
 from modules.tenancy.adapters.database import get_session_factory
 from modules.tenancy.domain.models import OutboxEvent, ScheduledAction
+from sqlalchemy import select, update
 
 logger = structlog.get_logger()
 
@@ -20,16 +19,13 @@ async def relay_outbox(ctx: dict) -> None:
     factory = get_session_factory()
     async with factory() as session:
         result = await session.execute(
-            select(OutboxEvent)
-            .where(OutboxEvent.published_at.is_(None))
-            .order_by(OutboxEvent.created_at)
-            .limit(100)
+            select(OutboxEvent).where(OutboxEvent.published_at.is_(None)).order_by(OutboxEvent.created_at).limit(100)
         )
         events = result.scalars().all()
         for event in events:
             # Publish to Valkey stream (webhooks, SSE fan-out)
             logger.info("outbox.relay", topic=event.topic, event_id=str(event.id))
-            event.published_at = datetime.now(timezone.utc)
+            event.published_at = datetime.now(UTC)
         await session.commit()
 
 
@@ -41,7 +37,7 @@ async def poll_scheduled_actions(ctx: dict) -> None:
             select(ScheduledAction)
             .where(
                 ScheduledAction.status == "pending",
-                ScheduledAction.due_at <= datetime.now(timezone.utc),
+                ScheduledAction.due_at <= datetime.now(UTC),
             )
             .order_by(ScheduledAction.due_at)
             .limit(10)
@@ -51,7 +47,7 @@ async def poll_scheduled_actions(ctx: dict) -> None:
         for action in actions:
             action.status = "locked"
             action.locked_by = "worker"
-            action.locked_at = datetime.now(timezone.utc)
+            action.locked_at = datetime.now(UTC)
             action.attempts += 1
         await session.commit()
 
@@ -64,7 +60,7 @@ async def poll_scheduled_actions(ctx: dict) -> None:
                     .where(ScheduledAction.id == action.id)
                     .values(
                         status="done",
-                        completed_at=datetime.now(timezone.utc),
+                        completed_at=datetime.now(UTC),
                     )
                 )
                 await session.commit()

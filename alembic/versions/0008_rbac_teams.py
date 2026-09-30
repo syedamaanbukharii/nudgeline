@@ -5,13 +5,17 @@ Revises: 0007
 Create Date: 2026-09-28
 
 """
+
 from __future__ import annotations
 
-from collections.abc import Sequence
+from typing import TYPE_CHECKING
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects import postgresql
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 revision: str = "0008"
 down_revision: str | None = "0007"
@@ -30,8 +34,11 @@ def upgrade() -> None:
         sa.Column("target_meetings", sa.Integer(), server_default="5", nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
-        sa.ForeignKeyConstraint(["tenant_id"], ["tenants.id"], ),
-        sa.PrimaryKeyConstraint("id")
+        sa.ForeignKeyConstraint(
+            ["tenant_id"],
+            ["tenants.id"],
+        ),
+        sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(op.f("ix_teams_tenant_id"), "teams", ["tenant_id"], unique=False)
 
@@ -42,7 +49,9 @@ def upgrade() -> None:
     # RLS for Teams
     op.execute("ALTER TABLE teams ENABLE ROW LEVEL SECURITY")
     op.execute("ALTER TABLE teams FORCE ROW LEVEL SECURITY")
-    op.execute("CREATE POLICY tenant_isolation_policy ON teams USING (tenant_id = current_setting('app.tenant_id')::uuid)")
+    op.execute(
+        "CREATE POLICY tenant_isolation_policy ON teams USING (tenant_id = current_setting('app.tenant_id')::uuid)"
+    )
 
 
 def downgrade() -> None:

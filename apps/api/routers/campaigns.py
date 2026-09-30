@@ -1,7 +1,7 @@
 """Campaigns API router."""
 
-from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel, UUID4
+from fastapi import APIRouter, HTTPException, Request
+from pydantic import UUID4, BaseModel
 
 router = APIRouter(prefix="/v1/campaigns", tags=["campaigns"])
 
@@ -19,7 +19,7 @@ async def create_campaign(req: Request, data: CampaignCreateSchema):
     tenant_id = getattr(req.state, "tenant_id", None)
     if not tenant_id:
         raise HTTPException(status_code=401, detail="Unauthorized")
-    
+
     # In a real implementation, we would use SQLAlchemy session and create the campaign
     return {"id": "123e4567-e89b-12d3-a456-426614174000", "name": data.name, "status": "draft"}
 
