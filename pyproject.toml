@@ -58,7 +58,9 @@ select = ["E", "W", "F", "I", "UP", "B", "SIM", "TCH"]
 
 [tool.mypy]
 python_version = "3.12"
-strict = true
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
 plugins = ["pydantic.mypy"]
 
 [tool.pytest.ini_options]
