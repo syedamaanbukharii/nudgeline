@@ -24,7 +24,7 @@ async def get_current_tenant(request: Request) -> uuid.UUID:
     tenant_id = getattr(request.state, "tenant_id", None)
     if tenant_id is None:
         raise HTTPException(status_code=401, detail="Authentication required")
-    return tenant_id
+    return tenant_id  # type: ignore
 
 
 CurrentTenant = Annotated[uuid.UUID, Depends(get_current_tenant)]

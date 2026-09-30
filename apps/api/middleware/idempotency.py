@@ -62,7 +62,7 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
 
         if 200 <= response.status_code < 300:
             body = b""
-            async for chunk in response.body_iterator:
+            async for chunk in response.body_iterator:  # type: ignore
                 if isinstance(chunk, str):
                     body += chunk.encode()
                 else:

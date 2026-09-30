@@ -38,7 +38,7 @@ def configure_logging(json_output: bool = True) -> None:
         structlog.processors.TimeStamper(fmt="iso"),
         structlog.processors.StackInfoRenderer(),
         structlog.processors.UnicodeDecoder(),
-        redact_pii,
+        redact_pii,  # type: ignore
     ]
 
     if json_output:

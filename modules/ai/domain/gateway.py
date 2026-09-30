@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 
-import yaml
+import yaml  # type: ignore
 
 logger = logging.getLogger(__name__)
 
