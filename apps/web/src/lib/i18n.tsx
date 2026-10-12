@@ -196,6 +196,26 @@ const en = {
   added: "Added",
   noEntries: "No numbers yet",
   forbidden: "Your role doesn't include access to this page.",
+  codes: {
+    dialing: "Dialing",
+    answered: "Answered",
+    no_answer: "No answer",
+    busy: "Busy",
+    failed: "Failed",
+    sent: "Sent",
+    replied: "Replied",
+    pending: "Pending",
+    done: "Done",
+    skipped: "Skipped",
+    ok: "Within calling hours",
+    outside_calling_window: "Outside calling hours",
+    dnc_list: "On the do-not-call list",
+    max_attempts: "No attempts left",
+    shopify: "Shopify",
+    webhook: "Webhook",
+    test: "Test",
+    manual: "Added manually",
+  } as Record<string, string>,
   somethingWrong: "Something went wrong",
 };
 
@@ -386,6 +406,26 @@ const ar: Dict = {
   added: "تاريخ الإضافة",
   noEntries: "لا توجد أرقام بعد",
   forbidden: "دورك لا يتضمن الوصول إلى هذه الصفحة.",
+  codes: {
+    dialing: "جارٍ الاتصال",
+    answered: "تم الرد",
+    no_answer: "لا رد",
+    busy: "مشغول",
+    failed: "فشل",
+    sent: "أُرسلت",
+    replied: "تم الرد",
+    pending: "قيد الانتظار",
+    done: "تم",
+    skipped: "تم التخطي",
+    ok: "ضمن ساعات الاتصال",
+    outside_calling_window: "خارج ساعات الاتصال",
+    dnc_list: "في قائمة عدم الاتصال",
+    max_attempts: "انتهت المحاولات",
+    shopify: "شوبيفاي",
+    webhook: "Webhook",
+    test: "تجربة",
+    manual: "أُضيف يدوياً",
+  },
   somethingWrong: "حدث خطأ ما",
 };
 
@@ -411,6 +451,12 @@ export function useSetLang() {
     },
     [router],
   );
+}
+
+/** Human label for a backend code (status, reason, source); falls back to the code itself. */
+export function codeLabel(t: Dict, value: string | null | undefined): string {
+  if (!value) return "—";
+  return t.codes[value] ?? value;
 }
 
 export function formatDate(value: string | null | undefined, lang: Lang, withTime = true): string {

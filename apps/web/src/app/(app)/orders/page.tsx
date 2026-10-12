@@ -7,7 +7,7 @@ import { Suspense, useState } from "react";
 import { Forbidden, useCan } from "@/components/shell";
 import { Button, Card, Drawer, Empty, ErrorNote, Loading, PageHeader, Pill, Select, StatusBadge } from "@/components/ui";
 import { api, type Run, type RunStatus } from "@/lib/api";
-import { formatDate, formatMoney, useI18n } from "@/lib/i18n";
+import { codeLabel, formatDate, formatMoney, useI18n } from "@/lib/i18n";
 
 const STATUSES: RunStatus[] = ["queued", "waiting", "in_progress", "confirmed", "cancelled", "no_response", "blocked", "failed", "skipped"];
 const PAGE = 50;
@@ -82,7 +82,7 @@ function Orders() {
                   <tr key={run.id} onClick={() => setRun(run.id)} className="cursor-pointer border-b border-line/60 hover:bg-page">
                     <td className="px-5 py-3">
                       <div className="font-medium">{run.order_number || run.external_ref}</div>
-                      <div className="text-xs text-muted">{run.source === "test" ? "Test" : run.source}</div>
+                      <div className="text-xs text-muted">{codeLabel(t, run.source)}</div>
                     </td>
                     <td className="px-5 py-3">
                       <div>{run.customer_name || "—"}</div>
@@ -166,8 +166,8 @@ function RunDrawer({ runId, onClose }: { runId: string | null; onClose: () => vo
             <Detail label={t.defaultLanguage} value={r.language === "ar" ? t.lang_ar : t.lang_en} />
             <Detail label={t.received} value={formatDate(r.created_at, lang)} />
             <Detail label={t.nextAction} value={formatDate(r.next_action_at, lang)} />
-            <Detail label={t.source} value={r.source} />
-            <Detail label={t.storeUpdate} value={r.actions_status ?? "—"} />
+            <Detail label={t.source} value={codeLabel(t, r.source)} />
+            <Detail label={t.storeUpdate} value={codeLabel(t, r.actions_status)} />
           </dl>
           {r.actions_error && <ErrorNote message={r.actions_error} />}
 
@@ -196,7 +196,7 @@ function RunDrawer({ runId, onClose }: { runId: string | null; onClose: () => vo
                     <div className="min-w-0 flex-1 text-sm">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="font-medium">{t[`ch_${a.channel}`]}</span>
-                        <Pill>{a.status}</Pill>
+                        <Pill>{codeLabel(t, a.status)}</Pill>
                         {a.digit && (
                           <span className="text-ink-2">
                             {t.pressed} <kbd className="rounded border border-line-strong px-1.5 font-mono">{a.digit}</kbd>
@@ -228,7 +228,7 @@ function RunDrawer({ runId, onClose }: { runId: string | null; onClose: () => vo
                     )}
                     <div>
                       <span className="font-medium">{d.allowed ? t.allowed : t.notAllowed}</span>
-                      <span className="text-ink-2"> · {d.reason}</span>
+                      <span className="text-ink-2"> · {codeLabel(t, d.reason)}</span>
                       <div className="text-xs text-muted">
                         {d.local_time.slice(11, 16)} {t.localTime}
                         {d.retry_at && ` → ${formatDate(d.retry_at, lang)}`}

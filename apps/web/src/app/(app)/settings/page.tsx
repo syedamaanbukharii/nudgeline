@@ -22,7 +22,7 @@ import {
   Toggle,
 } from "@/components/ui";
 import { api, type DncEntry, type Meta, type Role, type User } from "@/lib/api";
-import { formatDate, useI18n } from "@/lib/i18n";
+import { codeLabel, formatDate, useI18n } from "@/lib/i18n";
 
 type Tab = "company" | "team" | "roles" | "dnc";
 
@@ -442,7 +442,7 @@ function DncTab() {
               <span className="tabular flex-1 font-mono" dir="ltr">
                 •••• {entry.phone_last4}
               </span>
-              <span className="text-ink-2">{entry.reason}</span>
+              <span className="text-ink-2">{codeLabel(t, entry.reason)}</span>
               <span className="hidden text-muted sm:inline">{formatDate(entry.created_at, lang)}</span>
               <Button size="sm" variant="ghost" onClick={() => remove.mutate(entry.id)} aria-label={t.delete}>
                 <Trash2 className="size-4" aria-hidden />
