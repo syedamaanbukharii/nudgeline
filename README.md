@@ -1,82 +1,57 @@
 # Nudgeline
 
-Multi-tenant AI voice agent that calls leads, books meetings, sets callback reminders, drafts follow-up emails, and writes results back to your CRM.
+Automated call workflows for businesses in the Gulf. When an event happens, such as a new cash-on-delivery order, the platform calls the customer in Arabic or English. The customer presses 1 to confirm or 2 to cancel, and the result is written back to the store.
 
-Built with Llama.
+- **First template:** COD order confirmation, with WhatsApp first and a call if there's no reply.
+- **Integrations:** Shopify, or any store through a signed webhook.
+- **Compliance:** calling windows in the customer's local time, a do-not-call list, and a stored decision for every dial.
+- **Multi-tenant SaaS:** row-level security, and roles each tenant defines from a fixed permission list.
+- **Self-hosted speech:** Chatterbox Multilingual for TTS and faster-whisper for STT.
 
-## Prerequisites
+## Run it locally
 
-- [Docker](https://docs.docker.com/get-docker/) and Docker Compose v2
-- [uv](https://docs.astral.sh/uv/) (Python package manager)
-- [Node.js](https://nodejs.org/) 22+ and [pnpm](https://pnpm.io/) 9+
-- [mkcert](https://github.com/FiloSottile/mkcert) (for local TLS certificates)
-
-## Quick start
+You need Docker with Compose v2, plus [uv](https://docs.astral.sh/uv/) and Node.js 22+ for development outside Docker.
 
 ```bash
-# 1. Clone and set up git hooks
-bash setup.sh
-
-# 2. Generate local TLS certificates
-mkcert -install
-mkcert -cert-file infra/nginx/certs/local.pem -key-file infra/nginx/certs/local-key.pem localhost 127.0.0.1
-
-# 3. Copy and fill environment variables
-cp .env.example .env
-
-# 4. Start all services
-make up
-
-# 5. Run database migrations
-make migrate
-
-# 6. Open the app
-# API:  https://localhost/api/healthz
-# Web:  https://localhost
-# Docs: https://localhost/api/docs (when ENABLE_API_DOCS=true)
+make setup   # creates .env from .env.example and a self-signed certificate
+make up      # postgres, migrations, api, worker, speech, web, nginx
 ```
+
+Fill in `SECRET_KEY`, `ENCRYPTION_MASTER_KEY`, `POSTGRES_PASSWORD` and `APP_DB_PASSWORD` in `.env` before the first `make up`.
+
+Open https://localhost and create an account. Then:
+
+1. Create a workflow from the Order confirmation template and activate it.
+2. Place a test call to your own number.
+
+The dev profile uses a simulated phone line, so nothing is actually dialed. The number's last digits pick the outcome: `…00` no answer, `…01` busy, `…99` cancel, anything else confirms.
+
+### Real calls and voices
+
+| Need | How to set it up |
+|---|---|
+| Arabic and English voices | Set `SPEECH_WITH_MODELS=true` and `TTS_BACKEND=chatterbox`. A GPU is recommended. |
+| Phone calls | Run `docker compose --profile voice up -d`. Set `TELEPHONY_BACKEND=livekit` and configure an outbound SIP trunk in LiveKit (`LIVEKIT_SIP_TRUNK_ID`). |
 
 ## Commands
 
-| Command | Description |
-|---------|-------------|
-| `make up` | Start all services (dev profile) |
-| `make down` | Stop all services |
-| `make migrate` | Run Alembic migrations |
-| `make lint` | Run ruff linter and formatter check |
-| `make typecheck` | Run mypy type checking |
-| `make test` | Run pytest test suite |
-| `make web` | Start Next.js dev server |
-| `make logs` | Follow Docker Compose logs |
+| Command | What it does |
+|---|---|
+| `make up` / `make down` | Start or stop the dev stack |
+| `make migrate` | Apply database migrations |
+| `make lint` | Run ruff lint and format checks |
+| `make typecheck` | Run mypy |
+| `make test` | Run the test suite against Postgres (`TEST_DATABASE_URL`, or a local `pgserver`) |
+| `make web` | Start the Next.js dev server on :3000 (proxies `/api` to :8000) |
 
-## Architecture
+## Layout
 
-Modular monolith with four application entry points:
-
-- **apps/api** — FastAPI REST API
-- **apps/job_worker** — arq background workers (dispatch, post-call, bulk)
-- **apps/voice_worker** — LiveKit Agents voice pipeline
-- **apps/web** — Next.js frontend
-
-Business modules under `modules/` follow ports-and-adapters: `domain/` (pure logic), `application/` (use cases), `ports/` (interfaces), `adapters/` (implementations).
-
-Speech services under `services/`:
-- **services/stt** — faster-whisper speech-to-text
-- **services/tts** — Kokoro text-to-speech
-
-## Stack
-
-| Layer | Technology |
-|-------|-----------|
-| Backend | Python 3.12, FastAPI, Pydantic v2, SQLAlchemy 2, Alembic, arq |
-| Database | PostgreSQL 16 + pgvector, PgBouncer, Valkey |
-| Auth | Keycloak (OIDC/SAML SSO) |
-| Voice | LiveKit + SIP, faster-whisper, Kokoro, Silero VAD |
-| LLMs | Groq (Llama), Ollama/vLLM (Qwen), Gemini (evals only) |
-| Frontend | Next.js, TypeScript, Tailwind, shadcn/ui |
-| Infra | Nginx, Docker Compose, Prometheus, Grafana, Loki |
+- `apps/api`: FastAPI app (auth, workflows, runs, integrations, webhooks)
+- `apps/worker`: Postgres-backed job runner that moves each order through its workflow
+- `apps/web`: Next.js dashboard in English and Arabic (RTL)
+- `modules/*`: business modules split into `domain/`, `application/`, `ports/` and `adapters/`
+- `services/speech`: self-hosted TTS/STT service
 
 ## License
 
 Proprietary. All rights reserved.
-# nudgeline

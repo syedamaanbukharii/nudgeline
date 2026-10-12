@@ -1,56 +1,51 @@
-"""Alembic migration environment."""
+"""Alembic environment. Migrations run as the schema owner (DATABASE_URL_SYSTEM)."""
 
 from __future__ import annotations
 
-import os
+import asyncio
 from logging.config import fileConfig
 
+from sqlalchemy import pool
+from sqlalchemy.ext.asyncio import create_async_engine
+
+import modules.compliance.domain.models
+import modules.identity.domain.models
+import modules.integrations.domain.models
+import modules.workflows.domain.models  # noqa: F401  (register tables on Base.metadata)
 from alembic import context
-from sqlalchemy import create_engine, pool
+from modules.tenancy.domain.models import Base
+from modules.tenancy.domain.settings import get_settings
 
 config = context.config
-
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Override sqlalchemy.url from environment
-config.set_main_option(
-    "sqlalchemy.url",
-    os.getenv("DATABASE_URL", "postgresql://nudgeline:nudgeline@localhost:5432/nudgeline"),
-)
-
-target_metadata = None
+target_metadata = Base.metadata
+URL = get_settings().database_url_system
 
 
 def run_migrations_offline() -> None:
-    """Run migrations in offline mode."""
-    url = config.get_main_option("sqlalchemy.url")
     context.configure(
-        url=url,
-        target_metadata=target_metadata,
-        literal_binds=True,
-        dialect_opts={"paramstyle": "named"},
+        url=URL, target_metadata=target_metadata, literal_binds=True, dialect_opts={"paramstyle": "named"}
     )
-
     with context.begin_transaction():
         context.run_migrations()
 
 
-def run_migrations_online() -> None:
-    """Run migrations in online mode."""
-    connectable = create_engine(
-        config.get_main_option("sqlalchemy.url", ""),
-        poolclass=pool.NullPool,
-    )
+def _run(connection) -> None:  # noqa: ANN001
+    context.configure(connection=connection, target_metadata=target_metadata)
+    with context.begin_transaction():
+        context.run_migrations()
 
-    with connectable.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata)
 
-        with context.begin_transaction():
-            context.run_migrations()
+async def run_migrations_online() -> None:
+    engine = create_async_engine(URL, poolclass=pool.NullPool)
+    async with engine.connect() as connection:
+        await connection.run_sync(_run)
+    await engine.dispose()
 
 
 if context.is_offline_mode():
     run_migrations_offline()
 else:
-    run_migrations_online()
+    asyncio.run(run_migrations_online())

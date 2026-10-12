@@ -1,57 +1,53 @@
 [project]
 name = "nudgeline"
 version = "0.1.0"
-description = "Nudgeline backend"
+description = "Call-workflow engine backend"
 requires-python = ">=3.12"
 dependencies = [
-    "fastapi==0.115.12",
-    "uvicorn[standard]==0.34.2",
-    "pydantic==2.11.3",
-    "pydantic-settings==2.9.1",
-    "sqlalchemy[asyncio]==2.0.41",
-    "asyncpg==0.30.0",
-    "alembic==1.15.2",
-    "arq==0.26.1",
+    "fastapi==0.143.0",
+    "uvicorn[standard]==0.54.0",
+    "pydantic==2.14.1",
+    "pydantic-settings==2.15.0",
+    "sqlalchemy[asyncio]==2.1.4",
+    "asyncpg==0.32.0",
+    "alembic==1.20.0",
     "httpx==0.28.1",
-    "authlib==1.6.0",
-    "python-jose[cryptography]==3.4.0",
-    "python-multipart==0.0.20",
-    "structlog==25.1.0",
-    "orjson==3.10.18",
-    "tenacity==9.1.2",
-    "phonenumbers==8.13.55",
-    "dateparser==1.2.1",
-    "cryptography==44.0.3",
-    "boto3==1.38.34",
-    "valkey==6.1.0",
-    "opentelemetry-api==1.33.1",
-    "opentelemetry-sdk==1.33.1",
-    "opentelemetry-instrumentation-fastapi==0.54b1",
-    "langfuse==2.60.0",
-    "langgraph==0.4.1",
-    "jinja2==3.1.6",
-    "python-slugify==8.0.4",
+    "structlog==26.1.0",
+    "orjson==3.13.0",
+    "phonenumbers==9.0.41",
+    "cryptography==50.0.2",
+    "pyjwt==2.15.1",
+    "argon2-cffi==25.1.0",
+    "livekit==1.1.20",
+    "livekit-api==1.2.1",
+    "tzdata==2026.5",
 ]
 
 [dependency-groups]
 dev = [
-    "ruff==0.11.12",
-    "mypy==1.15.0",
-    "pytest==8.4.0",
-    "pytest-asyncio==1.0.0",
-    "pytest-cov==6.1.1",
-    "httpx>=0.28.1",
-    "factory-boy==3.3.3",
-    "import-linter==2.4",
+    "ruff==0.17.0",
+    "mypy==2.4.0",
+    "pytest==9.1.1",
+    "pytest-asyncio==1.4.0",
+    "pytest-cov==7.1.0",
+    "import-linter==2.15",
 ]
 
 [tool.ruff]
 line-length = 120
 target-version = "py312"
-src = ["apps", "modules", "services"]
+src = ["."]
 
 [tool.ruff.lint]
-select = ["E", "W", "F", "I", "UP", "B", "SIM", "TCH"]
+select = ["E", "W", "F", "I", "UP", "B", "SIM", "TC"]
+# SQLAlchemy and pydantic resolve annotations at runtime, so typing-only import moves are unsafe here.
+ignore = ["TC001", "TC002", "TC003"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["apps", "modules", "services"]
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.File", "fastapi.Form"]
 
 [tool.ruff.lint.per-file-ignores]
 "alembic/versions/*.py" = ["E501"]
@@ -65,6 +61,9 @@ plugins = ["pydantic.mypy"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+testpaths = ["tests"]
 
 [tool.importlinter]
 root_packages = ["apps", "modules", "services"]

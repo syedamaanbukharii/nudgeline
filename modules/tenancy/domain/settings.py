@@ -1,70 +1,79 @@
-"""Application settings loaded from environment."""
+"""Application settings loaded from environment variables or Docker secrets."""
 
 from __future__ import annotations
 
+import os
 from functools import lru_cache
+from typing import Literal
 
-from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_SECRETS_DIR = "/run/secrets"
 
 
 class Settings(BaseSettings):
-    """Application-wide configuration."""
+    """Application-wide configuration.
+
+    Values come from the environment (or `.env` in development). In production,
+    secrets are read from Docker secrets files under /run/secrets.
+    """
 
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
+        secrets_dir=_SECRETS_DIR if os.path.isdir(_SECRETS_DIR) else None,
     )
 
-    # Database
-    database_url: str = "postgresql+asyncpg://nudgeline:nudgeline@pgbouncer:6432/nudgeline"
-    database_url_sync: str = "postgresql://nudgeline:nudgeline@pgbouncer:6432/nudgeline"
+    brand_name: str = "Nudgeline"
+    environment: Literal["development", "test", "staging", "production"] = "development"
+    enable_api_docs: bool = False
+    cors_origins: str = "http://localhost:3000"
+    public_base_url: str = "https://localhost"
 
-    # Valkey
-    valkey_url: str = "valkey://valkey:6379/0"
+    # Database: the app role is subject to row-level security; the system role owns
+    # the schema and is used only for migrations, sign-up/login lookups, webhook
+    # resolution and the job worker's queue.
+    database_url: str = "postgresql+asyncpg://nudgeline_app:nudgeline_app@postgres:5432/nudgeline"
+    database_url_system: str = "postgresql+asyncpg://nudgeline:nudgeline@postgres:5432/nudgeline"
 
-    # Keycloak
-    keycloak_url: str = "http://keycloak:8080"
-    keycloak_realm: str = "nudgeline"
-    keycloak_client_id: str = "nudgeline-api"
-    keycloak_client_secret: str = "change-me"
+    # Auth
+    secret_key: str = "change-me-in-production"
+    access_token_ttl_minutes: int = 720
+    cookie_secure: bool = False
 
-    # LiveKit
+    # Encryption of personal data (base64-encoded 32-byte key)
+    encryption_master_key: str = ""
+
+    # Speech service (self-hosted STT/TTS)
+    speech_url: str = "http://speech:8000"
+
+    # Telephony
+    telephony_backend: Literal["simulated", "livekit"] = "simulated"
+    simulated_digit: str = "1"
+    simulated_delay_seconds: float = 1.0
     livekit_url: str = "ws://livekit:7880"
     livekit_api_key: str = "devkey"
-    livekit_api_secret: str = "devsecret"
+    livekit_api_secret: str = ""
+    livekit_sip_trunk_id: str = ""
 
-    # Object storage
-    s3_endpoint_url: str = "http://seaweedfs:8333"
-    s3_access_key: str = "admin"
-    s3_secret_key: str = "admin"
-    s3_bucket_recordings: str = "recordings"
-    s3_bucket_transcripts: str = "transcripts"
+    # Worker
+    worker_concurrency: int = 5
+    worker_poll_seconds: float = 2.0
 
-    # LLM providers
-    groq_api_key: str = ""
-    gemini_api_key: str = ""
+    # Third-party API versions
+    shopify_api_version: str = "2025-07"
+    whatsapp_api_version: str = "v22.0"
 
-    # Observability
-    glitchtip_dsn: str = ""
-    langfuse_public_key: str = ""
-    langfuse_secret_key: str = ""
-    langfuse_host: str = "http://langfuse:3001"
+    @property
+    def docs_enabled(self) -> bool:
+        """API docs are on in development, and elsewhere only when explicitly enabled."""
+        return self.environment == "development" or self.enable_api_docs
 
-    # App
-    environment: str = "development"
-    enable_api_docs: bool = True
-    cors_origins: str = "http://localhost:3000"
-    secret_key: str = "change-me-in-production"
-
-    # Encryption
-    encryption_master_key: str = "base64-encoded-32-byte-key-here"
-
-    # Rate limits
-    rate_limit_per_key: int = Field(default=100, description="Requests per minute per API key")
-    rate_limit_per_tenant: int = Field(default=1000, description="Requests per minute per tenant")
+    @property
+    def is_production(self) -> bool:
+        return self.environment == "production"
 
 
 @lru_cache
