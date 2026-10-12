@@ -46,7 +46,7 @@ const en = {
   day: "Day",
   total: "Total",
   noData: "No orders yet",
-  noDataHint: "Activate a workflow and connect your store, or place a test call to see results here.",
+  noDataHint: "Activate a workflow and connect your store. Test calls appear in Orders & calls and are not counted here.",
   getStarted: "Get started",
 
   // statuses
@@ -241,7 +241,7 @@ const ar: Dict = {
   day: "اليوم",
   total: "الإجمالي",
   noData: "لا توجد طلبات بعد",
-  noDataHint: "فعّل سير عمل واربط متجرك، أو أجرِ مكالمة تجريبية لترى النتائج هنا.",
+  noDataHint: "فعّل سير عمل واربط متجرك. المكالمات التجريبية تظهر في الطلبات والمكالمات ولا تُحتسب هنا.",
   getStarted: "ابدأ الآن",
 
   st_queued: "في الانتظار",
