@@ -40,7 +40,8 @@ class OrderEvent:
     total: str | None = None
     currency: str | None = None
     items: list[dict[str, Any]] = field(default_factory=list)
-    is_cod: bool | None = None
+    payment_type: str = "unknown"  # cod | prepaid | unknown
+    is_first_order: bool | None = None
 
 
 @dataclass(frozen=True)
@@ -74,16 +75,32 @@ def normalize_phone(raw: str, default_country: str, fallback_timezone: str) -> N
     )
 
 
-async def active_workflow(session: AsyncSession) -> Workflow | None:
+async def active_workflows(session: AsyncSession) -> list[Workflow]:
     ecommerce = [k for k, t in TEMPLATES.items() if t.industry == "ecommerce"]
-    return (
-        await session.execute(
-            select(Workflow)
-            .where(Workflow.status == "active", Workflow.template_key.in_(ecommerce))
-            .order_by(Workflow.created_at)
-            .limit(1)
-        )
-    ).scalar_one_or_none()
+    return list(
+        (
+            await session.execute(
+                select(Workflow)
+                .where(Workflow.status == "active", Workflow.template_key.in_(ecommerce))
+                .order_by(Workflow.created_at)
+            )
+        ).scalars()
+    )
+
+
+async def route(session: AsyncSession, event: OrderEvent) -> tuple[Workflow | None, str | None]:
+    """The first active workflow whose trigger accepts this order, or the reason none did."""
+    workflows = await active_workflows(session)
+    if not workflows:
+        return None, "no_active_workflow"
+    reasons = []
+    for workflow in workflows:
+        trigger = WorkflowSettings.model_validate(workflow.settings).trigger
+        reason = trigger.matches(event.payment_type, event.total, event.is_first_order)
+        if reason is None:
+            return workflow, None
+        reasons.append(reason)
+    return None, reasons[0] if len(set(reasons)) == 1 else "no_matching_workflow"
 
 
 async def ingest_order(
@@ -95,12 +112,20 @@ async def ingest_order(
 ) -> IngestResult:
     """Create a run for an order (idempotent on the order's external reference)."""
     now = now or datetime.now(UTC)
-    workflow = workflow or await active_workflow(session)
+    existing = (
+        await session.execute(
+            select(WorkflowRun.id).where(
+                WorkflowRun.source == event.source, WorkflowRun.external_ref == event.external_ref[:120]
+            )
+        )
+    ).scalar_one_or_none()
+    if existing is not None:  # the same order delivered twice (webhook retries)
+        return IngestResult("duplicate", run_id=existing)
     if workflow is None:
-        return IngestResult("ignored", reason="no_active_workflow")
+        workflow, skip_reason = await route(session, event)
+        if workflow is None:
+            return IngestResult("ignored", reason=skip_reason)
     settings = WorkflowSettings.model_validate(workflow.settings)
-    if event.source != "test" and settings.cod_only and event.is_cod is False:
-        return IngestResult("ignored", reason="not_cod")
 
     phone = normalize_phone(event.phone, tenant.country, tenant.timezone)
     data_key = await tenant_data_key(session, tenant.id)

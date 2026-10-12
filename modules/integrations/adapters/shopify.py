@@ -23,11 +23,22 @@ def verify_webhook(body: bytes, header_hmac: str | None, secret: str) -> bool:
     return hmac.compare_digest(digest, header_hmac)
 
 
-def _is_cod(order: dict[str, Any]) -> bool:
+_PAID_STATUSES = ("paid", "partially_paid", "authorized", "partially_refunded")
+
+
+def payment_type(order: dict[str, Any]) -> str:
+    """cod when a COD gateway was used, prepaid when money was taken online, otherwise unknown."""
     gateways = [str(g).lower() for g in order.get("payment_gateway_names") or []]
     if any(marker in g for g in gateways for marker in _COD_MARKERS):
-        return True
-    return order.get("financial_status") == "pending" and not gateways
+        return "cod"
+    if order.get("financial_status") in _PAID_STATUSES:
+        return "prepaid"
+    return "cod" if order.get("financial_status") == "pending" and not gateways else "unknown"
+
+
+def _is_first_order(order: dict[str, Any]) -> bool | None:
+    count = (order.get("customer") or {}).get("orders_count")
+    return None if count is None else int(count) <= 1
 
 
 def parse_order(order: dict[str, Any]) -> OrderEvent | None:
@@ -57,7 +68,8 @@ def parse_order(order: dict[str, Any]) -> OrderEvent | None:
             {"name": str(li.get("title", ""))[:80], "quantity": int(li.get("quantity") or 1)}
             for li in order.get("line_items") or []
         ],
-        is_cod=_is_cod(order),
+        payment_type=payment_type(order),
+        is_first_order=_is_first_order(order),
     )
 
 

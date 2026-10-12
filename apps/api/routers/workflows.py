@@ -8,11 +8,13 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
+from sqlalchemy import func, select
 
 from apps.api.dependencies import Context, require
 from apps.wiring import build_engine
+from modules.integrations.domain.models import Integration
 from modules.workflows.application import manage
-from modules.workflows.domain.models import Workflow
+from modules.workflows.domain.models import Workflow, WorkflowRun
 from modules.workflows.domain.templates import TEMPLATES
 
 router = APIRouter(prefix="/v1", tags=["workflows"])
@@ -160,10 +162,11 @@ async def list_runs(
     status: str | None = None,
     workflow_id: uuid.UUID | None = None,
     before: datetime | None = None,
+    q: Annotated[str | None, Query(max_length=60)] = None,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
 ) -> list[dict[str, Any]]:
     views = await manage.list_runs(
-        ctx.session, ctx.tenant_id, status=status, workflow_id=workflow_id, before=before, limit=limit
+        ctx.session, ctx.tenant_id, status=status, workflow_id=workflow_id, before=before, search=q, limit=limit
     )
     return [_run(v) for v in views]
 
@@ -182,11 +185,37 @@ async def retry_run(run_id: uuid.UUID, ctx: ManageRuns) -> dict[str, Any]:
     return {"ok": True}
 
 
+@router.post("/runs/{run_id}/reveal")
+async def reveal_phone(run_id: uuid.UUID, ctx: ManageRuns) -> dict[str, str]:
+    return {"phone": await manage.reveal_phone(ctx.session, ctx.tenant_id, ctx.user_id, run_id)}
+
+
 @router.post("/runs/{run_id}/stop")
 async def stop_run(run_id: uuid.UUID, ctx: ManageRuns) -> dict[str, Any]:
     view = await manage.get_run(ctx.session, ctx.tenant_id, run_id)
     await build_engine().cancel(ctx.session, view.run)
     return {"ok": True}
+
+
+@router.get("/setup")
+async def setup(ctx: ViewWorkflows) -> dict[str, bool]:
+    """Onboarding checklist for a new account."""
+    statuses = set((await ctx.session.execute(select(Workflow.status))).scalars())
+    stores = (
+        await ctx.session.execute(
+            select(func.count()).select_from(Integration).where(Integration.provider.in_(("shopify", "webhook")))
+        )
+    ).scalar_one()
+    tests = (
+        await ctx.session.execute(select(func.count()).select_from(WorkflowRun).where(WorkflowRun.source == "test"))
+    ).scalar_one()
+    return {
+        "workflow_created": bool(statuses),
+        "store_connected": stores > 0,
+        "test_call_placed": tests > 0,
+        "workflow_active": "active" in statuses,
+        "return_cost_set": bool(ctx.principal.tenant.settings.get("avg_return_cost")),
+    }
 
 
 @router.get("/overview")

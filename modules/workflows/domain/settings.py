@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import re
-from typing import Literal
+from decimal import Decimal, InvalidOperation
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -56,13 +57,53 @@ class Actions(BaseModel):
     no_response: OutcomeAction = OutcomeAction(tag="cod-no-response")
 
 
+PaymentType = Literal["cod", "prepaid", "unknown"]
+
+
+def _default_payment_types() -> list[PaymentType]:
+    return ["cod", "unknown"]
+
+
+class Trigger(BaseModel):
+    """Which orders start this workflow. Cash on delivery is the default."""
+
+    # Orders whose payment method the store doesn't report are treated like COD by default.
+    payment_types: list[PaymentType] = Field(default_factory=lambda: _default_payment_types(), min_length=1)
+    min_total: float | None = Field(default=None, ge=0)
+    new_customers_only: bool = False
+
+    def matches(self, payment_type: str, total: str | None, is_first_order: bool | None) -> str | None:
+        """None when the order qualifies, otherwise the reason it doesn't."""
+        if payment_type not in self.payment_types:
+            return f"payment_{payment_type}"
+        if self.min_total is not None:
+            try:
+                if total is None or Decimal(total) < Decimal(str(self.min_total)):
+                    return "below_min_total"
+            except InvalidOperation:
+                return "below_min_total"
+        if self.new_customers_only and is_first_order is False:
+            return "returning_customer"
+        return None
+
+
 class WorkflowSettings(BaseModel):
     delay_minutes: int = Field(default=0, ge=0, le=1440)
-    cod_only: bool = True
+    trigger: Trigger = Trigger()
     whatsapp: WhatsAppStep = WhatsAppStep()
     call: CallStep = CallStep()
     window: Window = Window()
     actions: Actions = Actions()
+
+    @model_validator(mode="before")
+    @classmethod
+    def _upgrade_cod_only(cls, data: Any) -> Any:
+        # Workflows saved before triggers existed carry a single `cod_only` flag.
+        if isinstance(data, dict) and "cod_only" in data:
+            data = dict(data)
+            cod_only = data.pop("cod_only")
+            data.setdefault("trigger", {"payment_types": ["cod"] if cod_only else ["cod", "prepaid", "unknown"]})
+        return data
 
     @model_validator(mode="after")
     def _one_channel(self) -> WorkflowSettings:

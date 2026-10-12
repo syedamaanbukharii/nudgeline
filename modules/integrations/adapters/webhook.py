@@ -37,6 +37,16 @@ def verify(body: bytes, header: str | None, secret: str, now: int | None = None)
     return hmac.compare_digest(sign(body, secret, timestamp), header.replace(" ", ""))
 
 
+_PREPAID = {"prepaid", "paid", "card", "online", "credit_card", "apple_pay", "wallet"}
+
+
+def _payment_type(method: str | None) -> str:
+    value = (method or "").strip().lower()
+    if value in {"cod", "cash", "cash_on_delivery"}:
+        return "cod"
+    return "prepaid" if value in _PREPAID else "unknown"
+
+
 class OrderItem(BaseModel):
     name: str = Field(max_length=120)
     quantity: int = Field(default=1, ge=1, le=1000)
@@ -53,7 +63,10 @@ class OrderIn(BaseModel):
     total: str | None = Field(default=None, max_length=20)
     currency: str | None = Field(default=None, min_length=3, max_length=3)
     items: list[OrderItem] = Field(default_factory=list, max_length=50)
-    payment_method: str | None = Field(default=None, description="'cod' marks cash on delivery")
+    payment_method: str | None = Field(
+        default=None, max_length=40, description="'cod' for cash on delivery; 'prepaid', 'card', 'online' for paid"
+    )
+    is_first_order: bool | None = None
 
     def to_event(self) -> OrderEvent:
         return OrderEvent(
@@ -66,7 +79,8 @@ class OrderIn(BaseModel):
             total=self.total,
             currency=self.currency.upper() if self.currency else None,
             items=[i.model_dump() for i in self.items],
-            is_cod=None if self.payment_method is None else self.payment_method.lower() == "cod",
+            payment_type=_payment_type(self.payment_method),
+            is_first_order=self.is_first_order,
         )
 
 

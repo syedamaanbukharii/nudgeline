@@ -164,7 +164,7 @@ async def _active_owner_count(session: AsyncSession) -> int:
             select(func.count())
             .select_from(User)
             .join(Role, Role.id == User.role_id)
-            .where(Role.name == OWNER_ROLE, Role.is_system.is_(True), User.is_active.is_(True))
+            .where(Role.is_system.is_(True), User.is_active.is_(True))
         )
     ).scalar_one()
 

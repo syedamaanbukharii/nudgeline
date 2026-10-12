@@ -8,7 +8,7 @@ from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
 from pydantic import ValidationError
-from sqlalchemy import func, select
+from sqlalchemy import ColumnElement, func, or_, select
 
 from modules.tenancy.application.audit import audit
 from modules.tenancy.application.keyring import tenant_data_key
@@ -59,9 +59,14 @@ async def create_workflow(
     except KeyError as exc:
         raise WorkflowError(422, "Unknown or unavailable template") from exc
     script, settings = _validated(template.script, {})
+    base = (name or template.name["en"]).strip()[:110]
+    taken = set((await session.execute(select(Workflow.name))).scalars())
+    unique, n = base, 2
+    while unique in taken:
+        unique, n = f"{base} {n}", n + 1
     workflow = Workflow(
         tenant_id=tenant_id,
-        name=(name or template.name["en"]).strip()[:120],
+        name=unique,
         template_key=template.key,
         status="draft",
         default_language="auto",
@@ -99,13 +104,8 @@ async def update_workflow(
 
 
 async def set_status(session: AsyncSession, user_id: uuid.UUID, workflow_id: uuid.UUID, status: str) -> Workflow:
+    # Several workflows can be active; each order goes to the oldest active one whose trigger matches.
     workflow = await get_workflow(session, workflow_id)
-    if status == "active":
-        others = (
-            await session.execute(select(Workflow).where(Workflow.status == "active", Workflow.id != workflow.id))
-        ).scalars()
-        for other in others:  # one active order workflow per tenant keeps routing unambiguous
-            other.status = "paused"
     workflow.status = status
     audit(session, workflow.tenant_id, user_id, f"workflow.{status}", "workflow", workflow.id)
     return workflow
@@ -148,6 +148,9 @@ class RunView:
     attempts: list[RunAttempt]
 
 
+NEEDS_ATTENTION = ("no_response", "failed")
+
+
 def mask_phone(phone: str) -> str:
     return phone[:4] + "•" * max(len(phone) - 8, 2) + phone[-4:] if len(phone) > 8 else "••" + phone[-4:]
 
@@ -159,11 +162,24 @@ async def list_runs(
     status: str | None = None,
     workflow_id: uuid.UUID | None = None,
     before: datetime | None = None,
+    search: str | None = None,
     limit: int = 50,
 ) -> list[RunView]:
     query = select(WorkflowRun).order_by(WorkflowRun.created_at.desc()).limit(min(limit, 200))
-    if status:
+    if status == "attention":
+        query = query.where(WorkflowRun.status.in_(NEEDS_ATTENTION))
+    elif status:
         query = query.where(WorkflowRun.status == status)
+    if search and (term := search.strip()):
+        # Names and phone numbers are encrypted, so search covers order numbers and the phone's last 4 digits.
+        like = f"%{term.lstrip('#')}%"
+        conditions: list[ColumnElement[bool]] = [
+            WorkflowRun.order_number.ilike(like),
+            WorkflowRun.external_ref.ilike(like),
+        ]
+        if term.isdigit() and len(term) == 4:
+            conditions.append(WorkflowRun.phone_last4 == term)
+        query = query.where(or_(*conditions))
     if workflow_id:
         query = query.where(WorkflowRun.workflow_id == workflow_id)
     if before:
@@ -188,6 +204,16 @@ async def get_run(session: AsyncSession, tenant_id: uuid.UUID, run_id: uuid.UUID
     )
     contact = decrypt_json(run.contact_enc, await tenant_data_key(session, tenant_id))
     return RunView(run, str(contact.get("name", "")), mask_phone(str(contact.get("phone", ""))), attempts)
+
+
+async def reveal_phone(session: AsyncSession, tenant_id: uuid.UUID, user_id: uuid.UUID, run_id: uuid.UUID) -> str:
+    """Full number for an agent who needs to call the customer by hand. Every reveal is audited."""
+    run = await session.get(WorkflowRun, run_id)
+    if run is None:
+        raise WorkflowError(404, "Run not found")
+    contact = decrypt_json(run.contact_enc, await tenant_data_key(session, tenant_id))
+    audit(session, tenant_id, user_id, "run.phone_revealed", "run", run.id)
+    return str(contact.get("phone", ""))
 
 
 async def overview(session: AsyncSession, *, days: int, avg_return_cost: float) -> dict[str, Any]:
@@ -225,6 +251,7 @@ async def overview(session: AsyncSession, *, days: int, avg_return_cost: float) 
     return {
         "days": days,
         "total": total,
+        "needs_attention": sum(counts.get(s, 0) for s in NEEDS_ATTENTION),
         "by_status": counts,
         "confirmation_rate": round(confirmed / answered, 3) if answered else None,
         "response_rate": round(answered / total, 3) if total else None,
