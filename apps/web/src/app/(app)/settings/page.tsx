@@ -362,7 +362,7 @@ function RoleForm({ role, catalogue, onClose }: { role: Role | null; catalogue: 
                   onChange={(e) => setPerms(e.target.checked ? [...perms, key] : perms.filter((p) => p !== key))}
                 />
                 <span className="text-sm">
-                  <span className="block">{label}</span>
+                  <span className="block">{t.permissionLabels[key] ?? label}</span>
                   <span className="block font-mono text-xs text-muted" dir="ltr">
                     {key}
                   </span>
