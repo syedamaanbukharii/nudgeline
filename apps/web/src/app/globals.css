@@ -55,3 +55,8 @@ body {
   outline: 2px solid var(--color-brand-500);
   outline-offset: 2px;
 }
+
+/* Inter's fallback face covers Arabic glyphs, so put the Arabic face first in RTL. */
+html[lang="ar"] body {
+  font-family: var(--font-arabic), var(--font-latin), system-ui, sans-serif;
+}
