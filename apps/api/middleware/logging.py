@@ -31,10 +31,7 @@ def configure_logging(json_output: bool = True) -> None:
     """Configure structlog for JSON output with PII redaction."""
     processors: list[structlog.types.Processor] = [
         structlog.contextvars.merge_contextvars,
-        structlog.stdlib.filter_by_level,
-        structlog.stdlib.add_logger_name,
-        structlog.stdlib.add_log_level,
-        structlog.stdlib.PositionalArgumentsFormatter(),
+        structlog.processors.add_log_level,
         structlog.processors.TimeStamper(fmt="iso"),
         structlog.processors.StackInfoRenderer(),
         structlog.processors.UnicodeDecoder(),
@@ -42,13 +39,14 @@ def configure_logging(json_output: bool = True) -> None:
     ]
 
     if json_output:
+        processors.append(structlog.processors.format_exc_info)
         processors.append(structlog.processors.JSONRenderer())
     else:
         processors.append(structlog.dev.ConsoleRenderer())
 
     structlog.configure(
         processors=processors,
-        wrapper_class=structlog.stdlib.BoundLogger,
+        wrapper_class=structlog.make_filtering_bound_logger(logging.INFO),
         context_class=dict,
         logger_factory=structlog.PrintLoggerFactory(),
         cache_logger_on_first_use=True,
