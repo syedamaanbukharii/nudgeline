@@ -5,7 +5,7 @@ import { ArrowLeft, Pause, PhoneOutgoing, Play } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Forbidden, useCan } from "@/components/shell";
+import { Forbidden, useCan, useMe } from "@/components/shell";
 import {
   Button,
   Card,
@@ -37,6 +37,7 @@ export default function WorkflowEditor() {
   const { id } = useParams<{ id: string }>();
   const { t } = useI18n();
   const can = useCan();
+  const me = useMe();
   const qc = useQueryClient();
   const editable = can("workflows.manage");
   const workflow = useQuery({ queryKey: ["workflow", id], queryFn: () => api<Workflow>(`/v1/workflows/${id}`) });
@@ -95,7 +96,7 @@ export default function WorkflowEditor() {
                 <Pause className="size-4" aria-hidden /> {t.pause}
               </Button>
             ) : (
-              <Button variant="secondary" onClick={() => setStatus.mutate("activate")} loading={setStatus.isPending} title={t.activeNote}>
+              <Button variant="secondary" onClick={() => setStatus.mutate("activate")} loading={setStatus.isPending} title={t.routingNote}>
                 <Play className="size-4" aria-hidden /> {t.activate}
               </Button>
             )}
@@ -130,6 +131,63 @@ export default function WorkflowEditor() {
                   <option value="en">{t.lang_en}</option>
                 </Select>
               </Field>
+            </div>
+          </Card>
+
+          <Card>
+            <CardHeader title={t.trigger} description={t.triggerHint} />
+            <div className="space-y-5 p-5">
+              <fieldset className="space-y-2">
+                {(["cod", "prepaid", "unknown"] as const).map((type) => {
+                  const on = s.trigger.payment_types.includes(type);
+                  const only = on && s.trigger.payment_types.length === 1;
+                  return (
+                    <label key={type} className={cx("flex items-center gap-3 rounded-lg border px-3 py-2.5 text-sm", on ? "border-brand-500 bg-brand-50" : "border-line")}>
+                      <input
+                        type="checkbox"
+                        className="size-4 accent-brand-600"
+                        checked={on}
+                        disabled={!editable || only}
+                        onChange={(e) =>
+                          setSettings({
+                            trigger: {
+                              ...s.trigger,
+                              payment_types: e.target.checked
+                                ? [...s.trigger.payment_types, type]
+                                : s.trigger.payment_types.filter((p) => p !== type),
+                            },
+                          })
+                        }
+                      />
+                      {t[`pay_${type}`]}
+                    </label>
+                  );
+                })}
+              </fieldset>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label={`${t.minTotal} (${me.tenant.currency})`} hint={t.minTotalHint}>
+                  <Input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    className="tabular"
+                    disabled={!editable}
+                    value={s.trigger.min_total ?? ""}
+                    onChange={(e) =>
+                      setSettings({ trigger: { ...s.trigger, min_total: e.target.value === "" ? null : Number(e.target.value) } })
+                    }
+                  />
+                </Field>
+                <div className="flex items-center pt-6">
+                  <Toggle
+                    checked={s.trigger.new_customers_only}
+                    disabled={!editable}
+                    onChange={(v) => setSettings({ trigger: { ...s.trigger, new_customers_only: v } })}
+                    label={t.newCustomersOnly}
+                  />
+                </div>
+              </div>
+              <p className="rounded-lg bg-page px-3 py-2 text-xs text-ink-2">{t.routingNote}</p>
             </div>
           </Card>
 
@@ -213,9 +271,6 @@ export default function WorkflowEditor() {
                 <Field label={t.delayMinutes}>
                   <NumberInput min={0} max={1440} value={s.delay_minutes} onChange={(v) => setSettings({ delay_minutes: v })} />
                 </Field>
-                <div className="flex items-end pb-2">
-                  <Toggle checked={s.cod_only} disabled={!editable} onChange={(v) => setSettings({ cod_only: v })} label={t.codOnly} />
-                </div>
               </div>
             </div>
           </Card>

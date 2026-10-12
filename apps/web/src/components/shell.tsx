@@ -6,7 +6,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { ApiError, api, type Me } from "@/lib/api";
-import { useI18n, useSetLang, type TKey } from "@/lib/i18n";
+import { roleName, useI18n, useSetLang, type TKey } from "@/lib/i18n";
+import { BRAND_NAME, Logo } from "./brand";
 import { Loading, cx } from "./ui";
 
 const MeContext = createContext<Me | null>(null);
@@ -29,17 +30,6 @@ const NAV: { href: string; label: TKey; icon: LucideIcon; permission?: string }[
   { href: "/integrations", label: "nav_integrations", icon: Plug, permission: "integrations.manage" },
   { href: "/settings", label: "nav_settings", icon: Settings },
 ];
-
-export function BrandMark({ name, light }: { name: string; light?: boolean }) {
-  return (
-    <div className="flex items-center gap-2.5">
-      <div className="flex size-8 items-center justify-center rounded-lg bg-brand-500 text-white">
-        <PhoneCall className="size-4" aria-hidden />
-      </div>
-      <span className={cx("text-lg font-semibold tracking-tight", light ? "text-white" : "text-ink")}>{name}</span>
-    </div>
-  );
-}
 
 export function Shell({ children }: { children: ReactNode }) {
   const { t, lang } = useI18n();
@@ -68,12 +58,17 @@ export function Shell({ children }: { children: ReactNode }) {
   const sidebar = (
     <div className="flex h-full flex-col bg-brand-900 text-white/80">
       <div className="flex h-16 items-center justify-between px-5">
-        <BrandMark name={me.data.brand_name} light />
+        <Logo size={30} onDark />
         <button className="rounded p-1 hover:bg-white/10 lg:hidden" onClick={() => setMenuOpen(false)} aria-label="Close menu">
           <X className="size-5" />
         </button>
       </div>
-      <div className="px-5 pb-4 text-xs text-white/50">{me.data.tenant.name}</div>
+      <div className="px-5 pb-5">
+        <p className="text-xs text-brand-100/80">{t.catchline}</p>
+        <p className="mt-3 truncate rounded-md bg-white/5 px-2.5 py-1.5 text-xs font-medium text-white/80">
+          {me.data.tenant.name}
+        </p>
+      </div>
       <nav className="flex-1 space-y-1 px-3">
         {nav.map(({ href, label, icon: Icon }) => (
           <Link
@@ -103,7 +98,7 @@ export function Shell({ children }: { children: ReactNode }) {
         </button>
         <div className="px-3 pt-2 text-xs text-white/50">
           <div className="truncate text-white/80">{me.data.user.full_name}</div>
-          <div className="truncate">{me.data.role.name}</div>
+          <div className="truncate">{roleName(t, me.data.role.name)}</div>
         </div>
       </div>
     </div>
@@ -111,7 +106,7 @@ export function Shell({ children }: { children: ReactNode }) {
 
   return (
     <MeContext.Provider value={me.data}>
-      <div className="min-h-screen lg:ps-64">
+      <div className="flex min-h-screen flex-col lg:ps-64">
         <aside className="fixed inset-y-0 start-0 z-40 hidden w-64 lg:block">{sidebar}</aside>
         {menuOpen && (
           <div className="fixed inset-0 z-50 bg-ink/40 lg:hidden" onClick={() => setMenuOpen(false)}>
@@ -125,10 +120,16 @@ export function Shell({ children }: { children: ReactNode }) {
             <Menu className="size-5" />
           </button>
           <div className="ms-3">
-            <BrandMark name={me.data.brand_name} />
+            <Logo size={26} />
           </div>
         </header>
-        <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
+        <main className="mx-auto w-full max-w-[1440px] flex-1 px-4 py-6 sm:px-6 lg:px-10 lg:py-8">{children}</main>
+        <footer className="mx-auto flex w-full max-w-[1440px] flex-wrap items-center justify-between gap-2 border-t border-line px-4 py-4 text-xs text-muted sm:px-6 lg:px-10">
+          <span>
+            {BRAND_NAME} · {t.catchline}
+          </span>
+          <span>{t.trustLine}</span>
+        </footer>
       </div>
     </MeContext.Provider>
   );

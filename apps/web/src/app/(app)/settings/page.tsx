@@ -22,7 +22,7 @@ import {
   Toggle,
 } from "@/components/ui";
 import { api, type DncEntry, type Meta, type Role, type User } from "@/lib/api";
-import { codeLabel, formatDate, useI18n } from "@/lib/i18n";
+import { codeLabel, formatDate, roleName, useI18n } from "@/lib/i18n";
 
 type Tab = "company" | "team" | "roles" | "dnc";
 
@@ -190,7 +190,7 @@ function TeamTab() {
                   >
                     {roles.data.map((r) => (
                       <option key={r.id} value={r.id}>
-                        {r.name}
+                        {roleName(t, r.name)}
                       </option>
                     ))}
                   </Select>
@@ -254,7 +254,7 @@ function AddUser({ roles, onClose }: { roles: Role[]; onClose: () => void }) {
           <Select value={form.role_id} onChange={(e) => setForm({ ...form, role_id: e.target.value })}>
             {roles.map((r) => (
               <option key={r.id} value={r.id}>
-                {r.name}
+                {roleName(t, r.name)}
               </option>
             ))}
           </Select>
@@ -274,7 +274,7 @@ function AddUser({ roles, onClose }: { roles: Role[]; onClose: () => void }) {
 }
 
 function RolesTab() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [editing, setEditing] = useState<Role | "new" | null>(null);
   const roles = useQuery({ queryKey: ["roles"], queryFn: () => api<Role[]>("/v1/roles") });
   const meta = useQuery({ queryKey: ["meta"], queryFn: () => api<Meta>("/v1/meta") });
@@ -294,10 +294,12 @@ function RolesTab() {
           <li key={role.id} className="flex flex-wrap items-center gap-4 px-5 py-4">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 font-medium">
-                {role.name}
+                {roleName(t, role.name)}
                 {role.is_system && <Lock className="size-3.5 text-muted" aria-label={t.ownerLocked} />}
               </div>
-              <p className="text-sm text-ink-2">{role.is_system ? t.ownerLocked : role.description}</p>
+              <p className="text-sm text-ink-2">
+                {role.is_system ? t.ownerLocked : (t.roleDescriptions[role.name] && lang === "ar" ? t.roleDescriptions[role.name] : role.description)}
+              </p>
             </div>
             <Pill>
               {role.permissions.length}/{Object.keys(meta.data.permissions).length}
@@ -336,7 +338,7 @@ function RoleForm({ role, catalogue, onClose }: { role: Role | null; catalogue: 
   const remove = useMutation({ mutationFn: () => api(`/v1/roles/${role!.id}`, { method: "DELETE" }), onSuccess: done });
 
   return (
-    <Modal open onClose={onClose} title={role ? role.name : t.newRole}>
+    <Modal open onClose={onClose} title={role ? roleName(t, role.name) : t.newRole}>
       <form
         className="space-y-4"
         onSubmit={(e) => {

@@ -4,16 +4,28 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowRight, CalendarCheck, ShoppingBag, Workflow as WorkflowIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Forbidden, useCan } from "@/components/shell";
+import { Forbidden, useCan, useMe } from "@/components/shell";
 import { Button, Card, CardHeader, ErrorNote, Loading, PageHeader, Pill } from "@/components/ui";
 import { api, type Template, type Workflow } from "@/lib/api";
-import { formatDate, useI18n } from "@/lib/i18n";
+import { dictionaries, formatDate, formatMoney, useI18n } from "@/lib/i18n";
+
+type Dict = (typeof dictionaries)["en"];
+
+function triggerSummary(wf: Workflow, t: Dict, currency: string, lang: "ar" | "en"): string[] {
+  const trigger = wf.settings.trigger;
+  if (!trigger) return [];
+  const labels = trigger.payment_types.map((p) => t[`pay_${p}`].split(" (")[0]);
+  if (trigger.min_total) labels.push(`≥ ${formatMoney(trigger.min_total, currency, lang)}`);
+  if (trigger.new_customers_only) labels.push(t.newCustomersOnly);
+  return labels;
+}
 
 const INDUSTRY_ICON = { ecommerce: ShoppingBag, healthcare: CalendarCheck } as const;
 
 export default function WorkflowsPage() {
   const { t, lang } = useI18n();
   const can = useCan();
+  const me = useMe();
   const router = useRouter();
   const qc = useQueryClient();
   const workflows = useQuery({ queryKey: ["workflows"], queryFn: () => api<Workflow[]>("/v1/workflows"), enabled: can("workflows.view") });
@@ -47,7 +59,14 @@ export default function WorkflowsPage() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium text-ink">{wf.name}</p>
-                    <p className="text-xs text-muted">{formatDate(wf.updated_at, lang)}</p>
+                    <div className="mt-1 flex flex-wrap gap-1.5">
+                      {triggerSummary(wf, t, me.tenant.currency, lang).map((label) => (
+                        <span key={label} className="rounded-md bg-page px-2 py-0.5 text-xs text-ink-2">
+                          {label}
+                        </span>
+                      ))}
+                      <span className="px-1 py-0.5 text-xs text-muted">{formatDate(wf.updated_at, lang)}</span>
+                    </div>
                   </div>
                   <Pill tone={statusTone[wf.status]}>{t[`wf_${wf.status}`]}</Pill>
                   <ArrowRight className="size-4 text-muted rtl:rotate-180" aria-hidden />

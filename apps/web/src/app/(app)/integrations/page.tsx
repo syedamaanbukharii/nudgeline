@@ -65,6 +65,14 @@ export default function IntegrationsPage() {
                 )}
               </div>
               <p className="mt-3 text-sm text-ink-2">{t[`int_${item.provider}_desc` as TKey] as string}</p>
+              <details className="group mt-3 rounded-lg border border-line bg-page/60 px-3 py-2 text-sm">
+                <summary className="cursor-pointer select-none font-medium text-brand-700">{t.howToConnect}</summary>
+                <ol className="mt-2 list-decimal space-y-1.5 ps-5 text-ink-2">
+                  {(t[`help_${item.provider}` as TKey] as string[]).map((step) => (
+                    <li key={step}>{step}</li>
+                  ))}
+                </ol>
+              </details>
               {item.connected && item.webhook_url && (
                 <div className="mt-4 space-y-3">
                   <Field label={t.webhookUrl}>

@@ -55,7 +55,6 @@ export interface LanguageScript {
 
 export interface WorkflowSettings {
   delay_minutes: number;
-  cod_only: boolean;
   whatsapp: { enabled: boolean; template_name: string; wait_minutes: number };
   call: {
     enabled: boolean;
@@ -65,6 +64,7 @@ export interface WorkflowSettings {
     input_timeout_seconds: number;
   };
   window: { start: string; end: string; weekdays: number[] };
+  trigger: { payment_types: ("cod" | "prepaid" | "unknown")[]; min_total: number | null; new_customers_only: boolean };
   actions: Record<"confirmed" | "cancelled" | "no_response", { tag: string | null; cancel_order: boolean }>;
 }
 
@@ -138,9 +138,18 @@ export interface Run {
   attempts?: Attempt[];
 }
 
+export interface SetupStatus {
+  workflow_created: boolean;
+  store_connected: boolean;
+  test_call_placed: boolean;
+  workflow_active: boolean;
+  return_cost_set: boolean;
+}
+
 export interface Overview {
   days: number;
   total: number;
+  needs_attention: number;
   by_status: Partial<Record<RunStatus, number>>;
   confirmation_rate: number | null;
   response_rate: number | null;

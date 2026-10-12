@@ -1,11 +1,11 @@
 "use client";
 
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { MessageCircle, Phone, PhoneCall, RotateCcw, ShieldCheck, ShieldX, StopCircle } from "lucide-react";
+import { Eye, MessageCircle, Phone, PhoneCall, RotateCcw, Search, ShieldCheck, ShieldX, StopCircle } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { Forbidden, useCan } from "@/components/shell";
-import { Button, Card, Drawer, Empty, ErrorNote, Loading, PageHeader, Pill, Select, StatusBadge } from "@/components/ui";
+import { Button, Card, Drawer, Empty, ErrorNote, Input, Loading, PageHeader, Pill, Select, StatusBadge } from "@/components/ui";
 import { api, type Run, type RunStatus } from "@/lib/api";
 import { codeLabel, formatDate, formatMoney, useI18n } from "@/lib/i18n";
 
@@ -26,13 +26,25 @@ function Orders() {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
-  const [status, setStatus] = useState<string>("");
+  const [status, setStatus] = useState<string>(params.get("status") ?? "");
+  const [search, setSearch] = useState("");
+  const [query, setQuery] = useState("");
   const openRun = params.get("run");
 
+  useEffect(() => {
+    const id = setTimeout(() => setQuery(search.trim()), 300);
+    return () => clearTimeout(id);
+  }, [search]);
+
   const runs = useInfiniteQuery({
-    queryKey: ["runs", status],
-    queryFn: ({ pageParam }) =>
-      api<Run[]>(`/v1/runs?limit=${PAGE}${status ? `&status=${status}` : ""}${pageParam ? `&before=${encodeURIComponent(pageParam)}` : ""}`),
+    queryKey: ["runs", status, query],
+    queryFn: ({ pageParam }) => {
+      const qs = new URLSearchParams({ limit: String(PAGE) });
+      if (status) qs.set("status", status);
+      if (query) qs.set("q", query);
+      if (pageParam) qs.set("before", pageParam);
+      return api<Run[]>(`/v1/runs?${qs}`);
+    },
     initialPageParam: "",
     getNextPageParam: (last) => (last.length === PAGE ? last[last.length - 1].created_at : undefined),
     enabled: can("runs.view"),
@@ -48,14 +60,28 @@ function Orders() {
       <PageHeader
         title={t.nav_orders}
         action={
-          <Select value={status} onChange={(e) => setStatus(e.target.value)} className="w-48" aria-label={t.status}>
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+            <div className="relative sm:w-72">
+              <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted" aria-hidden />
+              <Input
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder={t.searchOrders}
+                aria-label={t.searchOrders}
+                className="ps-9"
+              />
+            </div>
+          <Select value={status} onChange={(e) => setStatus(e.target.value)} className="sm:w-48" aria-label={t.status}>
             <option value="">{t.allStatuses}</option>
+            <option value="attention">{t.needsAttention}</option>
             {STATUSES.map((s) => (
               <option key={s} value={s}>
                 {t[`st_${s}`]}
               </option>
             ))}
           </Select>
+          </div>
         }
       />
       {runs.error && <ErrorNote message={runs.error.message} />}
@@ -125,6 +151,11 @@ function RunDrawer({ runId, onClose }: { runId: string | null; onClose: () => vo
     enabled: !!runId,
     refetchInterval: (q) => (q.state.data && ["queued", "waiting", "in_progress"].includes(q.state.data.status) ? 4000 : false),
   });
+  const [revealed, setRevealed] = useState<{ id: string; phone: string } | null>(null);
+  const reveal = useMutation({
+    mutationFn: () => api<{ phone: string }>(`/v1/runs/${runId}/reveal`, { method: "POST" }),
+    onSuccess: (data) => runId && setRevealed({ id: runId, phone: data.phone }),
+  });
   const action = useMutation({
     mutationFn: (kind: "retry" | "stop") => api(`/v1/runs/${runId}/${kind}`, { method: "POST" }),
     onSuccess: () => {
@@ -161,7 +192,31 @@ function RunDrawer({ runId, onClose }: { runId: string | null; onClose: () => vo
 
           <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
             <Detail label={t.customer} value={r.customer_name || "—"} />
-            <Detail label={t.phone} value={<span dir="ltr">{r.phone}</span>} />
+            <Detail
+              label={t.phone}
+              value={
+                revealed?.id === r.id ? (
+                  <span className="flex flex-col">
+                    <a dir="ltr" href={`tel:${revealed.phone}`} className="font-medium text-brand-700 hover:underline">
+                      {revealed.phone}
+                    </a>
+                    <span className="text-xs text-muted">{t.revealNote}</span>
+                  </span>
+                ) : (
+                  <span className="flex flex-wrap items-center gap-2">
+                    <span dir="ltr">{r.phone}</span>
+                    {can("runs.manage") && (
+                      <button
+                        onClick={() => reveal.mutate()}
+                        className="inline-flex items-center gap-1 text-xs font-medium text-brand-700 hover:underline"
+                      >
+                        <Eye className="size-3.5" aria-hidden /> {t.revealNumber}
+                      </button>
+                    )}
+                  </span>
+                )
+              }
+            />
             <Detail label={t.amount} value={formatMoney(r.total, r.currency || "AED", lang)} />
             <Detail label={t.defaultLanguage} value={r.language === "ar" ? t.lang_ar : t.lang_en} />
             <Detail label={t.received} value={formatDate(r.created_at, lang)} />

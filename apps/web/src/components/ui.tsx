@@ -189,7 +189,7 @@ export function StatusBadge({ status }: { status: RunStatus }) {
   const { t } = useI18n();
   const { icon: Icon, tone } = STATUS[status] ?? STATUS.queued;
   return (
-    <span className={cx("inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium", tone)}>
+    <span className={cx("inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium", tone)}>
       <Icon className="size-3.5" aria-hidden />
       {t[`st_${status}` as keyof typeof t] as string}
     </span>
@@ -200,7 +200,7 @@ export function Pill({ children, tone = "neutral" }: { children: ReactNode; tone
   return (
     <span
       className={cx(
-        "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
+        "inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium",
         tone === "neutral" && "border border-line bg-page text-ink-2",
         tone === "good" && "bg-good-bg text-good",
         tone === "warn" && "bg-warn-bg text-warn",
