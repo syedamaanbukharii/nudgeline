@@ -90,18 +90,21 @@ export function Field({ label, hint, children, className }: { label: ReactNode; 
 }
 
 const control =
-  "w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink placeholder:text-muted focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 disabled:bg-page";
+  "rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink placeholder:text-muted focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 disabled:bg-page";
+
+// Full width unless the caller sets its own width (w-40, w-48, ...).
+const width = (className?: string) => (className && /(^|\s)w-/.test(className) ? undefined : "w-full");
 
 export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
-  return <input {...props} className={cx(control, "h-10", props.className)} />;
+  return <input {...props} className={cx(control, width(props.className), "h-10", props.className)} />;
 }
 
 export function Textarea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return <textarea {...props} className={cx(control, "min-h-24 py-2 leading-relaxed", props.className)} />;
+  return <textarea {...props} className={cx(control, width(props.className), "min-h-24 py-2 leading-relaxed", props.className)} />;
 }
 
 export function Select(props: SelectHTMLAttributes<HTMLSelectElement>) {
-  return <select {...props} className={cx(control, "h-10", props.className)} />;
+  return <select {...props} className={cx(control, width(props.className), "h-10", props.className)} />;
 }
 
 export function Toggle({ checked, onChange, label, disabled }: { checked: boolean; onChange: (v: boolean) => void; label: ReactNode; disabled?: boolean }) {
@@ -291,7 +294,7 @@ export function CopyField({ value }: { value: string }) {
   const [copied, setCopied] = useState(false);
   return (
     <div className="flex gap-2">
-      <input readOnly value={value} dir="ltr" className={cx(control, "h-9 font-mono text-xs")} onFocus={(e) => e.target.select()} />
+      <input readOnly value={value} dir="ltr" className={cx(control, "h-9 w-full font-mono text-xs")} onFocus={(e) => e.target.select()} />
       <Button
         type="button"
         variant="secondary"
