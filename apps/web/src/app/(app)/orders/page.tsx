@@ -231,7 +231,7 @@ function RunDrawer({ runId, onClose }: { runId: string | null; onClose: () => vo
                       <span className="text-ink-2"> · {codeLabel(t, d.reason)}</span>
                       <div className="text-xs text-muted">
                         {d.local_time.slice(11, 16)} {t.localTime}
-                        {d.retry_at && ` → ${formatDate(d.retry_at, lang)}`}
+                        {d.retry_at && ` → ${formatDate(d.retry_at, lang, true, r.contact_timezone)}`}
                       </div>
                     </div>
                   </li>

@@ -459,11 +459,12 @@ export function codeLabel(t: Dict, value: string | null | undefined): string {
   return t.codes[value] ?? value;
 }
 
-export function formatDate(value: string | null | undefined, lang: Lang, withTime = true): string {
+export function formatDate(value: string | null | undefined, lang: Lang, withTime = true, timeZone?: string): string {
   if (!value) return "—";
   return new Intl.DateTimeFormat(lang === "ar" ? "ar-AE-u-nu-latn" : "en-GB", {
     day: "numeric",
     month: "short",
+    timeZone,
     ...(withTime ? { hour: "2-digit", minute: "2-digit" } : {}),
   }).format(new Date(value));
 }
