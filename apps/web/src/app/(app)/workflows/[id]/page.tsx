@@ -119,7 +119,7 @@ export default function WorkflowEditor() {
               <Field label={t.name}>
                 <Input value={draft.name} disabled={!editable} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
               </Field>
-              <Field label={t.defaultLanguage}>
+              <Field label={t.defaultLanguage} hint={draft.default_language === "auto" ? t.langAutoHint : undefined}>
                 <Select
                   value={draft.default_language}
                   disabled={!editable}
@@ -144,10 +144,11 @@ export default function WorkflowEditor() {
                 value={scriptLang}
                 onChange={setScriptLang}
               />
-              <div className="space-y-4" dir={scriptLang === "ar" ? "rtl" : "ltr"}>
+              <div className="space-y-4">
                 {(["prompt", "confirmed", "cancelled", "no_input"] as const).map((key) => (
                   <Field key={key} label={t[`sc_${key}`]}>
                     <Textarea
+                      dir={scriptLang === "ar" ? "rtl" : "ltr"}
                       value={draft.script[scriptLang][key]}
                       disabled={!editable}
                       rows={key === "prompt" ? 4 : 2}
