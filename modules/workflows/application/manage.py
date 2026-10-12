@@ -122,12 +122,13 @@ async def test_run(
 ) -> IngestResult:
     """Run the workflow once against your own phone, as if an order had arrived."""
     workflow = await get_workflow(session, workflow_id)
+    ref = uuid.uuid4().hex[:12]
     event = OrderEvent(
         source="test",
-        external_ref=f"test-{uuid.uuid4().hex[:12]}",
+        external_ref=f"test-{ref}",
         customer_name=customer_name,
         phone=phone,
-        order_number="TEST-1001",
+        order_number=f"TEST-{ref[:6].upper()}",
         locale=language,
         total="149",
         currency=tenant.currency,
