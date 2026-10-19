@@ -1,38 +1,29 @@
-"""Compliance engine domain models."""
+"""Do-not-call list."""
 
 from __future__ import annotations
 
 import uuid
-from typing import TYPE_CHECKING, Any
+from datetime import datetime
 
 import sqlalchemy as sa
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy import text
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from modules.tenancy.domain.models import Base
-
-if TYPE_CHECKING:
-    from datetime import datetime
+from modules.tenancy.domain.models import Base, TenantMixin
 
 
-class RulePack(Base):
-    """Compliance rules per jurisdiction."""
+class DncEntry(Base, TenantMixin):
+    """A phone number this tenant must never call. Stored only as a keyed hash."""
 
-    __tablename__ = "rule_packs"
-    __table_args__ = (sa.UniqueConstraint("jurisdiction", "version", name="uq_rule_packs_jurisdiction_version"),)
+    __tablename__ = "dnc_entries"
+    __table_args__ = (sa.UniqueConstraint("tenant_id", "phone_hash", name="uq_dnc_tenant_phone"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    jurisdiction: Mapped[str] = mapped_column(sa.String(10), nullable=False)
-    version: Mapped[int] = mapped_column(sa.Integer, nullable=False)
-    rules: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
-
-    effective_from: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False)
-    approved_by: Mapped[str] = mapped_column(sa.String(255), nullable=False)
-
-
-class ComplianceDecision:
-    """A business logic result for whether a dial is allowed."""
-
-    def __init__(self, allowed: bool, reason: str):
-        self.allowed = allowed
-        self.reason = reason
+    phone_hash: Mapped[bytes] = mapped_column(sa.LargeBinary, nullable=False)
+    phone_last4: Mapped[str] = mapped_column(sa.String(4), nullable=False)
+    reason: Mapped[str] = mapped_column(sa.String(40), server_default="manual", nullable=False)
+    created_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    created_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), server_default=text("now()"), nullable=False
+    )

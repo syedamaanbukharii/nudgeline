@@ -1,3 +1,62 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-latin), var(--font-arabic), system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --color-page: #f6f7f5;
+  --color-surface: #ffffff;
+  --color-ink: #0f1a17;
+  --color-ink-2: #4a5552;
+  --color-muted: #7d8784;
+  --color-line: #e3e6e3;
+  --color-line-strong: #c9cecb;
+
+  --color-brand-50: #ecf8f4;
+  --color-brand-100: #d2efe5;
+  --color-brand-500: #13896a;
+  --color-brand-600: #0d7258;
+  --color-brand-700: #0b5c48;
+  --color-brand-900: #07362b;
+
+  /* Outcome series (validated categorical order: blue, orange, aqua, yellow) */
+  --color-series-confirmed: #2a78d6;
+  --color-series-cancelled: #eb6834;
+  --color-series-noresponse: #1baf7a;
+  --color-series-open: #eda100;
+
+  /* Status (always paired with an icon and a label) */
+  --color-good: #0a7d0a;
+  --color-good-bg: #e8f5e8;
+  --color-warn: #8a5a00;
+  --color-warn-bg: #fdf3dc;
+  --color-serious: #b4471c;
+  --color-serious-bg: #fdece4;
+  --color-critical: #b42c2c;
+  --color-critical-bg: #fbe9e9;
+  --color-info: #1f5fae;
+  --color-info-bg: #e7f0fb;
+}
+
+html,
+body {
+  background: var(--color-page);
+  color: var(--color-ink);
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+}
+
+/* Inter's fallback face covers Arabic glyphs, so put the Arabic face first in RTL. */
+html[lang="ar"] body {
+  font-family: var(--font-arabic), var(--font-latin), system-ui, sans-serif;
+}

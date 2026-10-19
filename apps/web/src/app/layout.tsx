@@ -1,27 +1,31 @@
 import type { Metadata } from "next";
+import { IBM_Plex_Sans_Arabic, Inter } from "next/font/google";
+import { cookies } from "next/headers";
+import { Providers } from "@/components/providers";
+import type { Lang } from "@/lib/api";
 import "./globals.css";
 
+const latin = Inter({ subsets: ["latin"], variable: "--font-latin", display: "swap" });
+const arabic = IBM_Plex_Sans_Arabic({
+  subsets: ["arabic"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-arabic",
+  display: "swap",
+});
+
+const brand = process.env.NEXT_PUBLIC_BRAND_NAME || "Nudgeline";
+
 export const metadata: Metadata = {
-  title: "Nudgeline Dashboard",
-  description: "AI Voice Agent SaaS",
+  title: { default: brand, template: `%s · ${brand}` },
+  description: "Automated order-confirmation calls in Arabic and English.",
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const lang: Lang = (await cookies()).get("lang")?.value === "ar" ? "ar" : "en";
   return (
-    <html lang="en">
-      <body className="min-h-screen bg-slate-50 text-slate-900 antialiased font-sans">
-        <div className="flex h-screen flex-col">
-          <header className="sticky top-0 z-50 flex h-14 items-center border-b bg-white px-6">
-            <h1 className="font-bold">Nudgeline</h1>
-          </header>
-          <main className="flex-1 overflow-auto p-6">
-            {children}
-          </main>
-        </div>
+    <html lang={lang} dir={lang === "ar" ? "rtl" : "ltr"} className={`${latin.variable} ${arabic.variable}`}>
+      <body className="min-h-screen font-sans">
+        <Providers lang={lang}>{children}</Providers>
       </body>
     </html>
   );

@@ -1,22 +1,22 @@
-.PHONY: up down migrate lint typecheck test evals web logs reset-db shell certs setup
+.PHONY: setup certs up down logs migrate lint typecheck test web web-build
 
 setup: certs
 	cp -n .env.example .env || true
-	cp -n .env.example .env.staging || true
-	cp -n .env.example .env.prod || true
 
 certs:
-	@echo "Generating local SSL certs for Nginx..."
 	python generate_cert.py
 
-up: setup
+up:
 	docker compose --profile dev up -d --build
 
 down:
 	docker compose --profile dev down
 
+logs:
+	docker compose --profile dev logs -f
+
 migrate:
-	docker compose exec api alembic upgrade head
+	docker compose --profile dev run --rm migrate
 
 lint:
 	uv run ruff check .
@@ -26,20 +26,10 @@ typecheck:
 	uv run mypy apps modules services
 
 test:
-	uv run pytest --cov
-
-evals:
-	@echo "Run evals locally: uv run pytest evals/"
+	uv run pytest --cov=apps --cov=modules
 
 web:
-	cd apps/web && pnpm dev
+	cd apps/web && npm run dev
 
-logs:
-	docker compose logs -f
-
-reset-db:
-	docker compose exec postgres dropdb -U nudgeline nudgeline || true
-	docker compose exec postgres createdb -U nudgeline nudgeline
-
-shell:
-	docker compose exec api bash
+web-build:
+	cd apps/web && npm ci && npm run build

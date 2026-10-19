@@ -108,3 +108,6 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+
+# Next.js generated types
+next-env.d.ts

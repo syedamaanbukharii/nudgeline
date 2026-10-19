@@ -1,4 +1,4 @@
-"""Nudgeline API entry point."""
+"""API entry point."""
 
 from __future__ import annotations
 
@@ -7,12 +7,13 @@ from typing import TYPE_CHECKING
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import ORJSONResponse
-from modules.tenancy.domain.settings import get_settings
 
 from apps.api.middleware.errors import register_error_handlers
 from apps.api.middleware.logging import configure_logging
 from apps.api.middleware.request_id import RequestIDMiddleware
+from apps.api.routers import auth, hooks, integrations, team, workflows
+from modules.tenancy.adapters.database import dispose_engines
+from modules.tenancy.domain.settings import get_settings
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -20,45 +21,33 @@ if TYPE_CHECKING:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    """Handle startup and shutdown."""
     settings = get_settings()
     configure_logging(json_output=settings.environment != "development")
     yield
+    await dispose_engines()
 
 
 def create_app() -> FastAPI:
-    """Application factory."""
     settings = get_settings()
-    enable_docs = settings.enable_api_docs
-
+    docs = settings.docs_enabled
     app = FastAPI(
-        title="Nudgeline API",
-        version="0.1.0",
-        docs_url="/docs" if enable_docs else None,
-        redoc_url="/redoc" if enable_docs else None,
-        openapi_url="/openapi.json" if enable_docs else None,
-        default_response_class=ORJSONResponse,
+        title=f"{settings.brand_name} API",
+        version="0.2.0",
+        docs_url="/docs" if docs else None,
+        redoc_url="/redoc" if docs else None,
+        openapi_url="/openapi.json" if docs else None,
         lifespan=lifespan,
     )
-
-    # Middleware (order matters: outermost first)
     app.add_middleware(RequestIDMiddleware)
-
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.cors_origins.split(","),
+        allow_origins=[o.strip() for o in settings.cors_origins.split(",") if o.strip()],
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
+        allow_headers=["Content-Type", "Authorization", "X-Request-ID"],
     )
-
-    from apps.api.routers import campaigns, dashboards, live, webhooks
-
-    app.include_router(campaigns.router)
-    app.include_router(live.router)
-    app.include_router(webhooks.router)
-    app.include_router(dashboards.router)
-
+    for module in (auth, team, workflows, integrations, hooks):
+        app.include_router(module.router)
     register_error_handlers(app)
 
     @app.get("/healthz", tags=["system"])
